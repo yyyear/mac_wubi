@@ -190,6 +190,20 @@ final class WubiInputController: IMKInputController {
             return true
         }
 
+        // Shift + punctuation types the ASCII mark even in Chinese mode, which
+        // is how you get a literal '.' or ',' inside Chinese text.
+        if chineseMode, flags.contains(.shift), raw.count == 1, let character = raw.first,
+           PunctuationMapper.table[character] != nil || character == "\"" || character == "'" {
+            if engine.isActive, let text = engine.commitFirst() {
+                commit(text, client: client, additional: raw)
+            } else {
+                engine.reset()
+                panel.orderOut(nil)
+                insert(raw, client: client)
+            }
+            return true
+        }
+
         // Punctuation finishes the pending code, then emits the Chinese form.
         if chineseMode, engine.settings.chinesePunctuation, raw.count == 1, let character = raw.first {
             if let mapped = punctuation.map(character) {
@@ -230,14 +244,13 @@ final class WubiInputController: IMKInputController {
     /// switching languages never silently throws away what the user typed.
     private func toggleModeWithHUD() {
         if engine.isActive, let client = activeClient {
-            if let text = engine.commitFirst() {
-                commit(text, client: client)
-            } else {
-                let raw = engine.buffer
-                engine.reset()
-                panel.orderOut(nil)
-                insert(raw, client: client)
-            }
+            // Switching language keeps what was typed as typed: the pending code
+            // goes on screen as English letters, not as a Chinese candidate.
+            let raw = engine.buffer
+            engine.reset()
+            panel.orderOut(nil)
+            clearMarked(client)
+            insert(raw, client: client)
         }
 
         chineseMode.toggle()

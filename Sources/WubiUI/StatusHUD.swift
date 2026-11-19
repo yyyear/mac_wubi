@@ -12,7 +12,7 @@ public final class StatusHUD {
     private var imageCache: [String: NSImage] = [:]
 
     /// Roughly the size of the system's own input mode indicator.
-    private let iconSize: CGFloat = 20
+    private let iconSize: CGFloat = 30
 
     public init() {
         panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: iconSize, height: iconSize),
@@ -31,8 +31,8 @@ public final class StatusHUD {
 
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.wantsLayer = true
-        imageView.layer?.cornerRadius = 6
-        imageView.layer?.masksToBounds = true
+        // The artwork already has its own rounded shape; no extra clipping needed.
+        imageView.layer?.cornerRadius = 0
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         let content = NSView()
@@ -106,7 +106,6 @@ public final class StatusHUD {
         let name = chinese ? "hud-zh" : "hud-en"
         guard let url = Bundle.module.url(forResource: name, withExtension: "png"),
               let image = NSImage(contentsOf: url) else {
-            NSLog("WubiInput: HUD icon missing from resources")
             return nil
         }
         imageCache[key] = image

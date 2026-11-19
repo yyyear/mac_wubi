@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 四方五笔（macOS）
 
 一个轻量、原生的 macOS 五笔输入法，Swift 编写，基于 InputMethodKit。
@@ -176,3 +177,8 @@ macOS 只接受结构完全正确的输入法 bundle，**任何一处写错都�
 ## License
 
 MIT
+=======
+# input_wubi
+
+macOS 五笔输入法 原生
+>>>>>>> aa322b5aa6d26de666d5b93303d033725898db33

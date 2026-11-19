@@ -10,6 +10,10 @@ public struct WubiSettings: Codable, Equatable, Sendable {
     public var chinesePunctuation: Bool = true
     /// Treat a lone Shift press as a Chinese/English toggle.
     public var shiftTogglesEnglish: Bool = true
+    /// Also accept Shift+Space as a mode toggle.
+    public var shiftSpaceTogglesEnglish: Bool = true
+    /// Shift + punctuation emits the ASCII mark even in Chinese mode.
+    public var englishPunctuationWithShift: Bool = true
     /// Show a small badge at the caret whenever the mode changes.
     public var showModeHUD: Bool = true
     /// How many candidates a page holds. Clamped to 1...10.
@@ -22,6 +26,11 @@ public struct WubiSettings: Codable, Equatable, Sendable {
     public var prefixCandidates: Bool = true
     /// Number of candidate rows kept per lookup.
     public var candidateLimit: Int = 128
+
+    /// candidateLimit clamped to a range the UI can render sanely.
+    public var effectiveCandidateLimit: Int {
+        min(256, max(8, candidateLimit))
+    }
 
     public init() {}
 
@@ -40,6 +49,14 @@ public struct WubiSettings: Codable, Equatable, Sendable {
         supportDirectory.appendingPathComponent("config.json")
     }
 
+    /// Posted after the config file is rewritten so a running input method can
+    /// pick the change up immediately. Distributed: the settings window lives in
+    /// a different process from the input method.
+    public static let didChangeNotificationName = Notification.Name("com.sifang.wubi.settingsChanged")
+    public static let didChangeNotification = Notification.Name("com.sifang.wubi.settingsChanged")
+
+    static let distributedChangeName = "com.sifang.wubi.settingsChanged"
+
     public static func load() -> WubiSettings {
         guard let data = try? Data(contentsOf: fileURL),
               let decoded = try? JSONDecoder().decode(WubiSettings.self, from: data) else {
@@ -57,6 +74,12 @@ public struct WubiSettings: Codable, Equatable, Sendable {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         guard let data = try? encoder.encode(self) else { return }
         try? data.write(to: WubiSettings.fileURL, options: .atomic)
+        DistributedNotificationCenter.default().postNotificationName(
+            Notification.Name(WubiSettings.distributedChangeName),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
 
     /// Writes a default config file when none exists yet.

@@ -41,6 +41,20 @@ final class WubiInputController: IMKInputController {
         activeClient = sender as? IMKTextInput
         WubiSettings.ensureConfigFile()
         engine.settings = WubiSettings.load()
+        // The settings window runs in its own process, so listen on the
+        // distributed notification centre rather than the local one.
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(settingsChanged),
+            name: WubiSettings.didChangeNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(settingsChanged),
+            name: WubiSettings.didChangeNotification,
+            object: nil
+        )
         engine.reset()
         panel.orderOut(nil)
         hud.hide()
@@ -130,7 +144,8 @@ final class WubiInputController: IMKInputController {
         case 49: // space
             // Shift+Space flips the language mode; a bare Space commits.
             if flags.contains(.shift) {
-                guard engine.settings.shiftTogglesEnglish else { return false }
+                guard engine.settings.shiftTogglesEnglish,
+                      engine.settings.shiftSpaceTogglesEnglish else { return false }
                 toggleModeWithHUD()
                 return true
             }
@@ -192,7 +207,8 @@ final class WubiInputController: IMKInputController {
 
         // Shift + punctuation types the ASCII mark even in Chinese mode, which
         // is how you get a literal '.' or ',' inside Chinese text.
-        if chineseMode, flags.contains(.shift), raw.count == 1, let character = raw.first,
+        if chineseMode, flags.contains(.shift), engine.settings.englishPunctuationWithShift,
+           raw.count == 1, let character = raw.first,
            PunctuationMapper.table[character] != nil || character == "\"" || character == "'" {
             if engine.isActive, let text = engine.commitFirst() {
                 commit(text, client: client, additional: raw)
@@ -355,6 +371,10 @@ final class WubiInputController: IMKInputController {
         toggle.target = self
         menu.addItem(toggle)
 
+        let prefs = NSMenuItem(title: "偏好设置…", action: #selector(openPreferences), keyEquivalent: ",")
+        prefs.target = self
+        menu.addItem(prefs)
+
         let folder = NSMenuItem(title: "打开配置文件夹", action: #selector(openSettingsFolder), keyEquivalent: "")
         folder.target = self
         menu.addItem(folder)
@@ -366,8 +386,24 @@ final class WubiInputController: IMKInputController {
         return menu
     }
 
+    /// Picks up edits made in the settings window without restarting the method.
+    @objc private func settingsChanged() {
+        engine.settings = WubiSettings.load()
+    }
+
     @objc private func toggleMode() {
         chineseMode.toggle()
+    }
+
+    /// Launches the bundled settings app.
+    @objc private func openPreferences() {
+        let url = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Applications/WubiSettings.app")
+        if FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.open(url)
+        } else {
+            openSettingsFolder()
+        }
     }
 
     @objc private func openSettingsFolder() {

@@ -146,7 +146,7 @@ public final class InputEngine {
     /// offers every "wqa"..."wqz" word too, instead of staying silent until the
     /// full four keys are in.
     private func ranked(for code: String) -> [WubiCandidate] {
-        var result = boosted(dictionary.candidates(for: code, limit: settings.candidateLimit), code: code)
+        var result = boosted(dictionary.candidates(for: code, limit: settings.effectiveCandidateLimit), code: code)
 
         guard settings.prefixCandidates, code.count < WubiCode.maxCodeLength else { return result }
 
@@ -155,7 +155,7 @@ public final class InputEngine {
             guard !seen.contains(candidate.text) else { continue }
             seen.insert(candidate.text)
             result.append(candidate)
-            if result.count >= settings.candidateLimit { break }
+            if result.count >= settings.effectiveCandidateLimit { break }
         }
         return result
     }

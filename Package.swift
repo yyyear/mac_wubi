@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "WubiInput",
-    platforms: [.macOS(.v12)],
+    platforms: [.macOS(.v13)],
     products: [
         .executable(name: "WubiInput", targets: ["WubiInput"]),
         .executable(name: "wubi-preview", targets: ["WubiPreview"]),
@@ -28,6 +28,11 @@ let package = Package(
                 .linkedFramework("Cocoa"),
                 .linkedFramework("InputMethodKit"),
             ]
+        ),
+        .executableTarget(
+            name: "WubiSettingsApp",
+            dependencies: ["WubiCore"],
+            linkerSettings: [.linkedFramework("Cocoa")]
         ),
         .executableTarget(
             name: "WubiPreview",

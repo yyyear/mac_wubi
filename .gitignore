@@ -1,9 +1,9 @@
-<<<<<<< HEAD
+
 .build/
 build/
 .DS_Store
+.vscode
 *.xcuserstate
-=======
 # ---> Swift
 # Xcode
 #
@@ -67,5 +67,3 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
-
->>>>>>> aa322b5aa6d26de666d5b93303d033725898db33

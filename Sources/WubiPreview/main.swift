@@ -12,7 +12,7 @@ final class PreviewTextView: NSTextView {
     var onUpdate: (() -> Void)?
 
     override func keyDown(with event: NSEvent) {
-        guard let engine, let panel else { return super.keyDown(with: event) }
+        guard let engine, panel != nil else { return super.keyDown(with: event) }
         guard event.type == .keyDown else { return super.keyDown(with: event) }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if flags.contains(.command) || flags.contains(.control) || flags.contains(.option) {
@@ -66,8 +66,9 @@ final class PreviewTextView: NSTextView {
             }
         }
 
-        if let character = raw.first, character.isASCII, character.isLetter {
-            if engine.buffer.count >= WubiCode.maxCodeLength {
+        let separator = raw == "'" && !flags.contains(.shift) && engine.isActive && engine.settings.inputScheme != .wubi
+        if let character = raw.first, (character.isASCII && character.isLetter) || separator {
+            if engine.settings.inputScheme == .wubi && engine.buffer.count >= WubiCode.maxCodeLength {
                 if let text = engine.commitFirst() {
                     insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
                 }
@@ -127,7 +128,7 @@ final class PreviewWindowController: NSWindowController, NSTextViewDelegate {
         textView.isRichText = false
         textView.font = NSFont.systemFont(ofSize: 18)
         textView.textContainerInset = NSSize(width: 18, height: 18)
-        textView.string = "在这里输入五笔编码，例如 wqiy（你）、trnt（我）、jghu（是）。"
+        textView.string = "当前方案：\(engine.settings.inputScheme.displayName)。输入示例：五笔 wqiy（你），全拼 nihao（你好）。"
         textView.engine = engine
         textView.panel = panel
         textView.onUpdate = { [weak self] in self?.refreshPanel() }

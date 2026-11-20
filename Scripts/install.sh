@@ -22,6 +22,14 @@ for arg in "$@"; do
     esac
 done
 
+# Do not expose two installed bundles with identical input-source IDs.
+other="/Library/Input Methods/WubiInput.app"
+[[ "$SCOPE" != system ]] || other="$HOME/Library/Input Methods/WubiInput.app"
+if [[ -d "$other" ]]; then
+    echo "另一安装位置已有四方五笔：$other。请更新原位置，或先移除旧副本。" >&2
+    exit 1
+fi
+
 "$ROOT/Scripts/build.sh" "$CONFIG"
 
 if [[ "$SCOPE" == "system" ]]; then
@@ -48,69 +56,9 @@ echo "==> stopping any running instance"
 killall WubiInput 2>/dev/null || true
 sleep 0.5
 
-echo "==> clearing old input source entries"
-# Registering twice creates duplicate menu rows, so purge every trace of this
-# bundle id first, then register exactly once.
-python3 - <<'PYEOF' || true
-import os, plistlib
-path = os.path.expanduser("~/Library/Preferences/com.apple.HIToolbox.plist")
-if os.path.exists(path):
-    with open(path, "rb") as handle:
-        data = plistlib.load(handle)
-    for key in ("AppleEnabledInputSources", "AppleSelectedInputSources", "AppleInputSourceHistory"):
-        if key in data:
-            data[key] = [s for s in data[key] if s.get("Bundle ID") != "com.sifang.wubi"]
-    with open(path, "wb") as handle:
-        plistlib.dump(data, handle)
-PYEOF
-killall WubiInput 2>/dev/null || true
-killall TextInputMenuAgent imklaunchagent 2>/dev/null || true
-sleep 2
-
-echo "==> registering input source"
-swiftc -O Scripts/enable_input_source.swift -o build/enable-input-source 2>/dev/null || true
-[[ -x build/enable-input-source ]] && ./build/enable-input-source "$INSTALLED" || true
-
-echo "==> adding to the enabled input sources"
-# The entry must use InputSourceKind "Input Mode" and the mode id declared in
-# Info.plist; anything else is dropped by the text input system on read.
-defaults export com.apple.HIToolbox /tmp/wubi-hitoolbox.plist 2>/dev/null || true
-python3 - "/tmp/wubi-hitoolbox.plist" <<'PY' || true
-import plistlib, sys
-path = sys.argv[1]
-try:
-    with open(path, "rb") as handle:
-        data = plistlib.load(handle)
-except Exception:
-    data = {}
-sources = [s for s in data.get("AppleEnabledInputSources", [])
-           if s.get("Bundle ID") != "com.sifang.wubi"]
-sources.append({
-    "Bundle ID": "com.sifang.wubi",
-    "Input Mode": "com.sifang.wubi",
-    "InputSourceKind": "Input Mode",
-})
-data["AppleEnabledInputSources"] = sources
-with open(path, "wb") as handle:
-    plistlib.dump(data, handle)
-print("enabled input sources updated")
-PY
-defaults import com.apple.HIToolbox /tmp/wubi-hitoolbox.plist 2>/dev/null || true
-rm -f /tmp/wubi-hitoolbox.plist
-
-killall TextInputMenuAgent 2>/dev/null || true
-killall imklaunchagent 2>/dev/null || true
-
-echo
-echo "安装完成：$INSTALLED"
-echo
-cat <<'TIPS'
-系统在登录时构建输入法列表，因此新装的输入法需要：
-
-  · 注销并重新登录（或重启）一次，然后
-    系统设置 → 键盘 → 文字输入「输入法」→ 编辑… → 「+」→ 简体中文 → 五笔
-
-验证是否已生效：
-
-  ./Scripts/doctor.sh
-TIPS
+echo "==> enabling 四方五笔 (leaving other input sources unchanged)"
+if ! "$INSTALLED/Contents/MacOS/WubiInput" --ensure-input-mode; then
+    echo "已安装，但未确认启用；请注销后在系统设置 → 键盘 → 输入法中添加四方五笔。" >&2
+    exit 1
+fi
+echo "安装并启用完成：$INSTALLED"

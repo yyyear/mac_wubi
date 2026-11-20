@@ -32,7 +32,7 @@ print("  输入模式                  =", list(modes.keys()))
 print("  tsInputMethodCharacterRepertoireKey =", repertoire, "(必须是 Hans/Hant 这类脚本标签，不能是 zh_Hans)")
 ok = (info.get("TISInputSourceID") == info.get("CFBundleIdentifier")
       and info.get("InputMethodType") == "Keyboard"
-      and repertoire == ["Hans"]
+      and "Hans" in repertoire
       and list(modes.keys()) == [info.get("CFBundleIdentifier")])
 print("  => 结构", "正确" if ok else "有问题，请重新运行 ./Scripts/install.sh")
 PY
@@ -57,7 +57,7 @@ func flag(_ source: TISInputSource, _ key: CFString) -> Bool {
 }
 guard let sources = TISCreateInputSourceList(nil, true).takeRetainedValue() as? [TISInputSource] else { exit(1) }
 var found = false
-for source in sources where (text(source, kTISPropertyInputSourceID) ?? "").contains("oneself") {
+for source in sources where text(source, kTISPropertyBundleID) == "com.sifang.wubi" {
     found = true
     let id = text(source, kTISPropertyInputSourceID) ?? "-"
     let type = text(source, kTISPropertyInputSourceType) ?? "-"
@@ -71,7 +71,7 @@ swiftc -O build/tis_probe.swift -o build/tis_probe 2>/dev/null && ./build/tis_pr
 
 echo
 echo "== 已启用的输入源"
-defaults read com.apple.HIToolbox AppleEnabledInputSources 2>/dev/null | grep -A2 oneself || echo "  未写入"
+defaults read com.apple.HIToolbox AppleEnabledInputSources 2>/dev/null | grep -F "$BUNDLE_ID" || echo "  未写入"
 
 echo
 echo "== 运行中的输入法进程"

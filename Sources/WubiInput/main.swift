@@ -8,32 +8,17 @@ let bundleIdentifier = bundle.bundleIdentifier ?? "com.sifang.wubi"
 
 let arguments = CommandLine.arguments
 
-/// Dev helper: --select-self makes this GUI process switch the session to this
-/// input method. CLI tools cannot do it (TISSelectInputSource returns -50 from
-/// a process without a text input session), which makes local testing awkward.
-func selectSelf() {
-    guard let sources = TISCreateInputSourceList(nil, true).takeRetainedValue() as? [TISInputSource] else { return }
-    for source in sources {
-        guard let pointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else { continue }
-        let identifier = Unmanaged<CFString>.fromOpaque(pointer).takeUnretainedValue() as String
-        guard identifier.contains(bundleIdentifier) else { continue }
-        guard let typePointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceType) else { continue }
-        let type = Unmanaged<CFString>.fromOpaque(typePointer).takeUnretainedValue() as String
-        guard type == "TISTypeKeyboardInputMode" else { continue }
-        NSLog("WubiInput: enable -> \(TISEnableInputSource(source))")
-        NSLog("WubiInput: select -> \(TISSelectInputSource(source))")
-        let current = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
-        if let p = TISGetInputSourceProperty(current, kTISPropertyInputSourceID) {
-            NSLog("WubiInput: current source is now \(Unmanaged<CFString>.fromOpaque(p).takeUnretainedValue())")
-        }
-        return
-    }
-    NSLog("WubiInput: --select-self found no input source for \(bundleIdentifier)")
+// Handle one-shot requests before starting the IMK server. Normal launches
+// never register, enable, select, or rewrite the user's preferences.
+if arguments.contains("--register") || arguments.contains("--ensure-input-mode") {
+    exit(WubiRegistration(bundle)?.ensureEnabled() == true ? 0 : 1)
 }
 
-// NOTE: no TISRegisterInputSource here. Every call adds another entry to the
-// text input database, which is what produced a dozen duplicate menu rows.
-// Registration is a one-shot install concern, handled by Scripts/install.sh.
+if arguments.contains("--select-self") {
+    guard let mode = WubiRegistration(bundle)?.mode(all: false),
+          TISSelectInputSource(mode) == noErr else { exit(1) }
+    if arguments.contains("--select-only") { exit(0) }
+}
 
 guard let server = IMKServer(name: connectionName, bundleIdentifier: bundleIdentifier) else {
     NSLog("WubiInput: failed to create IMKServer (\(connectionName) / \(bundleIdentifier))")
@@ -41,26 +26,12 @@ guard let server = IMKServer(name: connectionName, bundleIdentifier: bundleIdent
 }
 NSLog("WubiInput: IMKServer ready on \(connectionName)")
 
-if arguments.contains("--select-self") {
-    selectSelf()
-    if arguments.contains("--select-only") {
-        exit(0)
-    }
-}
-
 // IMK never forwards modifier-only events, so the Shift shortcut is observed
 // with a global monitor. It only reacts to a Shift press that no other key
 // interrupts, which keeps Shift+letter working as usual.
 NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { event in
-    let shiftDown = event.modifierFlags.contains(.shift)
-    DispatchQueue.main.async {
-        guard let controller = WubiInputController.active else { return }
-        if shiftDown {
-            controller.beginShiftObservation()
-        } else {
-            controller.handleBareShiftRelease()
-        }
-    }
+    // AppKit dispatches global monitor callbacks on the main thread.
+    WubiInputController.active?.observeModifiers(event)
 }
 
 let application = NSApplication.shared

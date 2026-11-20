@@ -13,7 +13,7 @@ let package = Package(
     targets: [
         .target(
             name: "WubiCore",
-            resources: [.copy("Resources/wubi86.bin")]
+            resources: [.copy("Resources/wubi86.bin"), .copy("Resources/pinyin.tsv"), .copy("Resources/Pinyin-NOTICE.txt")]
         ),
         .target(
             name: "WubiUI",

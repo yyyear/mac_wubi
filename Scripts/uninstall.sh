@@ -16,24 +16,9 @@ for TARGET in "$HOME/Library/Input Methods/WubiInput.app" "/Library/Input Method
     fi
 done
 
-echo "==> removing the enabled-input-source entry"
-python3 - <<'PY' || true
-import os, plistlib, subprocess
-path = os.path.expanduser("~/Library/Preferences/com.apple.HIToolbox.plist")
-if not os.path.exists(path):
-    raise SystemExit(0)
-with open(path, "rb") as handle:
-    data = plistlib.load(handle)
-sources = [s for s in data.get("AppleEnabledInputSources", [])
-           if s.get("Bundle ID") != "com.sifang.wubi"]
-data["AppleEnabledInputSources"] = sources
-with open(path, "wb") as handle:
-    plistlib.dump(data, handle)
-subprocess.run(["killall", "cfprefsd"], capture_output=True)
-print("input source entry removed")
-PY
-
-killall TextInputMenuAgent 2>/dev/null || true
+# macOS rescans installed input methods at login. Do not edit keyboard
+# preferences or restart preference daemons to remove stale menu entries.
+echo "注销后系统将刷新输入源列表。"
 
 echo "==> keeping user data at ~/Library/Application Support/WubiInput (delete manually if unwanted)"
 echo "卸载完成"

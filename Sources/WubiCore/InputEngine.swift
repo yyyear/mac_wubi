@@ -8,16 +8,32 @@ public final class InputEngine {
     public private(set) var candidates: [WubiCandidate] = []
     public private(set) var page = 0
 
-    public var settings: WubiSettings
+    public var settings: WubiSettings {
+        didSet {
+            if oldValue.inputScheme != settings.inputScheme { reset() }
+            else if isActive { refresh() }
+        }
+    }
     public let dictionary: WubiDictionary
     public let lexicon: UserLexicon
 
     /// How many extra candidates a prefix may contribute.
     private let prefixSupplementLimit = 24
 
-    public init(dictionary: WubiDictionary = .shared,
-                lexicon: UserLexicon = .shared,
-                settings: WubiSettings = .load()) {
+    typealias Lookup = (String, InputScheme, Bool, Int) -> [WubiCandidate]
+    private let lookup: Lookup
+
+    public convenience init(dictionary: WubiDictionary = .shared,
+                            lexicon: UserLexicon = .shared,
+                            settings: WubiSettings = .load()) {
+        self.init(dictionary: dictionary, lexicon: lexicon, settings: settings) { code, scheme, prefix, limit in
+            SupplementalLexicon.shared.candidates(for: code, scheme: scheme, prefix: prefix, limit: limit)
+        }
+    }
+
+    init(dictionary: WubiDictionary = .shared, lexicon: UserLexicon, settings: WubiSettings,
+         lookup: @escaping Lookup) {
+        self.lookup = lookup
         self.dictionary = dictionary
         self.lexicon = lexicon
         self.settings = settings
@@ -48,9 +64,10 @@ public final class InputEngine {
     public var codeHint: String {
         guard settings.showCodeHint, !buffer.isEmpty else { return "" }
         if candidates.isEmpty {
-            return buffer.count < WubiCode.maxCodeLength ? "继续输入" : "无候选"
+            return settings.inputScheme != .wubi || buffer.count < WubiCode.maxCodeLength ? "继续输入" : "无候选"
         }
-        if buffer.count < WubiCode.maxCodeLength, dictionary.hasLongerCode(than: buffer) {
+        if settings.inputScheme != .pinyin, !buffer.contains("'"),
+           dictionary.hasLongerCode(than: buffer) {
             return "可续码"
         }
         if candidates.count > 1 { return "重码 " + String(candidates.count) }
@@ -62,11 +79,12 @@ public final class InputEngine {
     /// Appends one key. Returns the text to commit when the code auto-commits.
     @discardableResult
     public func append(_ character: Character) -> String? {
-        guard character.isLetter, character.isASCII else { return nil }
-        guard buffer.count < WubiCode.maxCodeLength else { return nil }
+        let isSeparator = character == "'" && settings.inputScheme != .wubi && !buffer.isEmpty && buffer.last != "'"
+        guard isSeparator || (character.isASCII && character.isLetter) else { return nil }
+        guard settings.inputScheme != .wubi || buffer.count < WubiCode.maxCodeLength else { return nil }
         buffer.append(Character(character.lowercased()))
         refresh()
-        if buffer.count == WubiCode.maxCodeLength,
+        if settings.inputScheme == .wubi, buffer.count == WubiCode.maxCodeLength,
            settings.autoCommitUnique,
            let only = candidates.first,
            candidates.count == 1 {
@@ -141,22 +159,57 @@ public final class InputEngine {
         candidates = ranked(for: buffer)
     }
 
-    /// Exact-code candidates first, then words whose code merely starts with the
-    /// typed keys. The second group makes a partial code productive: typing "wq"
-    /// offers every "wqa"..."wqz" word too, instead of staying silent until the
-    /// full four keys are in.
+    /// Exact results always precede completions. Interleave Wubi and Pinyin
+    /// by rank within each tier: their weights are not on a common scale, and
+    /// one dictionary should not consume the entire limit before the other.
     private func ranked(for code: String) -> [WubiCandidate] {
-        var result = boosted(dictionary.candidates(for: code, limit: settings.effectiveCandidateLimit), code: code)
+        let limit = settings.effectiveCandidateLimit
+        // The packed dictionary truncates long keys. Never probe it with a
+        // long spelling, or with a Pinyin syllable boundary, even in mixed mode.
+        let useWubi = settings.inputScheme != .pinyin && code.utf8.count <= WubiCode.maxCodeLength && !code.contains("'")
+        let usePinyin = settings.inputScheme != .wubi
+        let spelling = usePinyin ? code.replacingOccurrences(of: "'", with: "") : ""
+        var seen = Set<String>()
+        var result: [WubiCandidate] = []
 
-        guard settings.prefixCandidates, code.count < WubiCode.maxCodeLength else { return result }
-
-        var seen = Set(result.map { $0.text })
-        for candidate in prefixSupplements(for: code) {
-            guard !seen.contains(candidate.text) else { continue }
-            seen.insert(candidate.text)
-            result.append(candidate)
-            if result.count >= settings.effectiveCandidateLimit { break }
+        func appendTier(prefix: Bool) {
+            var wubi: [WubiCandidate] = []
+            if useWubi && (!prefix || code.utf8.count < WubiCode.maxCodeLength) {
+                wubi = prefix ? prefixSupplements(for: code) : dictionary.candidates(for: code, limit: limit)
+                let imported = lookup(code, .wubi, prefix, limit)
+                if !imported.isEmpty {
+                    wubi = (wubi + imported).sorted { $0.weight > $1.weight }
+                }
+            }
+            let pinyin = usePinyin ? lookup(spelling, .pinyin, prefix, limit) : []
+            var tier: [WubiCandidate] = []
+            for i in 0..<max(wubi.count, pinyin.count) {
+                if i < wubi.count, seen.insert(wubi[i].text).inserted { tier.append(wubi[i]) }
+                if i < pinyin.count, seen.insert(pinyin[i].text).inserted { tier.append(pinyin[i]) }
+            }
+            appendRanked(tier)
         }
+
+        func appendRanked(_ values: [WubiCandidate]) {
+            var tier = values
+            // A learned pick can lead either scheme, but never jump from the
+            // prefix tier ahead of an exact match. Stable ties retain the merge order.
+            if settings.userLearning, lexicon.total(for: code) > 0 {
+                tier.sort { lexicon.boost(for: code, text: $0.text) > lexicon.boost(for: code, text: $1.text) }
+            }
+            result.append(contentsOf: tier.prefix(limit - result.count))
+        }
+
+        appendTier(prefix: false)
+        if result.count < limit, usePinyin {
+            // Only exact lookup of bounded alternate spellings; never fan out
+            // prefix scans or send fuzzy codes to the Wubi dictionary.
+            let variants = FuzzyPinyin.variants(for: code, rules: settings.fuzzyPinyin)
+            let hits = variants.flatMap { lookup($0, .pinyin, false, limit) }
+                .sorted { $0.weight > $1.weight }
+            appendRanked(hits.filter { seen.insert($0.text).inserted })
+        }
+        if result.count < limit, settings.prefixCandidates { appendTier(prefix: true) }
         return result
     }
 
@@ -177,26 +230,4 @@ public final class InputEngine {
             .map { $0 }
     }
 
-    /// Ranks candidates by how likely the user is to commit them.
-    ///
-    /// The dictionary weight is the prior; every commit for this exact code is
-    /// evidence. A word committed n times out of m for the code gets a score
-    /// proportional to n/m, so repeated picks converge on the top while words
-    /// nobody has picked keep the shipped order.
-    private func boosted(_ base: [WubiCandidate], code: String) -> [WubiCandidate] {
-        guard settings.userLearning, !base.isEmpty else { return base }
-        let total = lexicon.total(for: code)
-        guard total > 0 else { return base }
-
-        let scored = base.map { candidate -> (WubiCandidate, Double) in
-            let probability = lexicon.probability(code: code, text: candidate.text)
-            // Prior sits just under 1.0 so a single commit already outranks it.
-            let prior = Double(candidate.weight) / 65535.0
-            return (candidate, probability + prior * 0.35)
-        }
-        return scored.sorted { lhs, rhs in
-            if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
-            return lhs.0.weight > rhs.0.weight
-        }.map { $0.0 }
-    }
 }

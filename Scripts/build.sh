@@ -25,10 +25,11 @@ cp "$BIN_DIR/WubiInput" "$APP/Contents/MacOS/WubiInput"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/icon.tiff "$APP/Contents/Resources/icon.tiff"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-# Localized names: without these the switcher HUD shows the bundle identifier.
-for LP in Resources/*.lproj; do
-    [[ -d "$LP" ]] || continue
-    cp -R "$LP" "$APP/Contents/Resources/"
+# InputSourceKit resolves the mode ID through the bundle’s InfoPlist.strings.
+for LOCALE in zh-Hans en; do
+    LP="$LOCALE.lproj"
+    plutil -lint "Resources/$LP/InfoPlist.strings" >/dev/null
+    cp -R "Resources/$LP" "$APP/Contents/Resources/"
 done
 
 # SwiftPM resource bundles: the dictionary and the HUD artwork.
@@ -58,6 +59,9 @@ fi
 strip -x "$APP/Contents/MacOS/WubiInput" 2>/dev/null || true
 
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
+# A restrictive umask must never leak into the bundle: system processes read it.
+chmod -R a+rX "$APP"
+find "$APP" -name Info.plist -exec chmod 644 {} +
 
 # Prefer a real identity: macOS validates input method signatures through
 # amfid, and ad-hoc signatures are rejected on recent releases. Override with

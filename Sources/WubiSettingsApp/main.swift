@@ -13,6 +13,7 @@ struct WubiSettingsApp: App {
             SettingsView()
                 .environmentObject(store)
         }
+        .defaultSize(width: 800, height: 560)
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .appInfo) {

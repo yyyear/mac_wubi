@@ -1,9 +1,16 @@
 import Foundation
 
+public enum InputScheme: String, Codable, CaseIterable, Sendable {
+    case wubi, pinyin, mixed
+}
+
 /// User configuration, stored as JSON under
 /// ~/Library/Application Support/WubiInput/config.json.
 /// Missing keys fall back to the defaults below, so the file is optional.
 public struct WubiSettings: Codable, Equatable, Sendable {
+    public var inputScheme: InputScheme = .wubi
+    public var fuzzyPinyin: Set<FuzzyPair> = FuzzyPair.defaults
+
     /// Commit automatically when a four-key code has exactly one candidate.
     public var autoCommitUnique: Bool = true
     /// Translate ASCII punctuation into Chinese punctuation.
@@ -33,6 +40,26 @@ public struct WubiSettings: Codable, Equatable, Sendable {
     }
 
     public init() {}
+
+    public init(from decoder: Decoder) throws {
+        self.init()
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        if let rules = try? values.decode([String].self, forKey: .fuzzyPinyin) {
+            fuzzyPinyin = Set(rules.compactMap(FuzzyPair.init(rawValue:)))
+        }
+        inputScheme = try values.decodeIfPresent(InputScheme.self, forKey: .inputScheme) ?? inputScheme
+        autoCommitUnique = try values.decodeIfPresent(Bool.self, forKey: .autoCommitUnique) ?? autoCommitUnique
+        chinesePunctuation = try values.decodeIfPresent(Bool.self, forKey: .chinesePunctuation) ?? chinesePunctuation
+        shiftTogglesEnglish = try values.decodeIfPresent(Bool.self, forKey: .shiftTogglesEnglish) ?? shiftTogglesEnglish
+        shiftSpaceTogglesEnglish = try values.decodeIfPresent(Bool.self, forKey: .shiftSpaceTogglesEnglish) ?? shiftSpaceTogglesEnglish
+        englishPunctuationWithShift = try values.decodeIfPresent(Bool.self, forKey: .englishPunctuationWithShift) ?? englishPunctuationWithShift
+        showModeHUD = try values.decodeIfPresent(Bool.self, forKey: .showModeHUD) ?? showModeHUD
+        pageSize = try values.decodeIfPresent(Int.self, forKey: .pageSize) ?? pageSize
+        userLearning = try values.decodeIfPresent(Bool.self, forKey: .userLearning) ?? userLearning
+        showCodeHint = try values.decodeIfPresent(Bool.self, forKey: .showCodeHint) ?? showCodeHint
+        prefixCandidates = try values.decodeIfPresent(Bool.self, forKey: .prefixCandidates) ?? prefixCandidates
+        candidateLimit = try values.decodeIfPresent(Int.self, forKey: .candidateLimit) ?? candidateLimit
+    }
 
     /// Page size as the UI should use it: 1 to 10, defaulting to 5.
     public var effectivePageSize: Int {

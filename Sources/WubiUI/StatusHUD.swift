@@ -8,6 +8,7 @@ import WubiCore
 public final class StatusHUD {
     private let panel: NSPanel
     private let imageView = NSImageView()
+    private let schemeLabel = NSTextField(labelWithString: "")
     private var hideWorkItem: DispatchWorkItem?
     private var imageCache: [String: NSImage] = [:]
 
@@ -43,16 +44,42 @@ public final class StatusHUD {
             imageView.topAnchor.constraint(equalTo: content.topAnchor),
             imageView.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
+        schemeLabel.alignment = .center
+        schemeLabel.font = .systemFont(ofSize: 13, weight: .medium)
+        schemeLabel.textColor = .white
+        schemeLabel.drawsBackground = false
+        schemeLabel.isHidden = true
+        content.addSubview(schemeLabel)
         panel.contentView = content
         panel.alphaValue = 0
     }
 
     /// Shows the badge for the given mode near the caret.
     public func show(chinese: Bool, near caret: NSRect?) {
+        schemeLabel.isHidden = true
+        imageView.isHidden = false
+        panel.backgroundColor = .clear
         imageView.image = image(for: chinese)
         panel.setContentSize(NSSize(width: iconSize, height: iconSize))
-        position(near: caret)
+        present(near: caret)
+    }
 
+    /// Unlike the language badge, a scheme switch identifies the exact scheme.
+    public func show(scheme: InputScheme, near caret: NSRect?) {
+        imageView.isHidden = true
+        schemeLabel.stringValue = scheme.displayName
+        schemeLabel.sizeToFit()
+        let width = ceil(schemeLabel.frame.width) + 20
+        panel.setContentSize(NSSize(width: width, height: iconSize))
+        schemeLabel.frame = NSRect(x: 0, y: (iconSize - schemeLabel.frame.height) / 2,
+                                   width: width, height: schemeLabel.frame.height)
+        schemeLabel.isHidden = false
+        panel.backgroundColor = NSColor(white: 0.15, alpha: 0.92)
+        present(near: caret)
+    }
+
+    private func present(near caret: NSRect?) {
+        position(near: caret)
         panel.alphaValue = 1
         // The input method runs as a background agent: orderFront alone can be
         // ignored, orderFrontRegardless puts the badge on screen anyway.

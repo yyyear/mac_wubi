@@ -24,7 +24,6 @@ final class WubiInputController: IMKInputController {
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
-        WubiInputController.active = self
         panel.onSelect = { [weak self] offset in
             guard let self, let client = self.activeClient else { return }
             let index = self.engine.page * self.engine.pageSize + offset
@@ -38,6 +37,8 @@ final class WubiInputController: IMKInputController {
 
     override func activateServer(_ sender: Any!) {
         super.activateServer(sender)
+        WubiInputController.active = self
+        shiftPending = false
         activeClient = sender as? IMKTextInput
         WubiSettings.ensureConfigFile()
         engine.settings = WubiSettings.load()
@@ -61,9 +62,14 @@ final class WubiInputController: IMKInputController {
     }
 
     override func deactivateServer(_ sender: Any!) {
+        DistributedNotificationCenter.default().removeObserver(self, name: WubiSettings.didChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: WubiSettings.didChangeNotification, object: nil)
         engine.reset()
         panel.orderOut(nil)
         if let client = sender as? IMKTextInput { clearMarked(client) }
+        if WubiInputController.active === self { WubiInputController.active = nil }
+        shiftPending = false
+        activeClient = nil
         super.deactivateServer(sender)
     }
 
@@ -85,7 +91,8 @@ final class WubiInputController: IMKInputController {
         activeClient = client
         switch event.type {
         case .flagsChanged:
-            return handleFlagsChanged(event)
+            observeModifiers(event)
+            return false
         case .keyDown:
             return handleKeyDown(event, client: client)
         default:
@@ -93,30 +100,27 @@ final class WubiInputController: IMKInputController {
         }
     }
 
-    private func handleFlagsChanged(_ event: NSEvent) -> Bool {
-        guard engine.settings.shiftTogglesEnglish else { return false }
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let isShift = flags.contains(.shift)
-        let hasOther = flags.contains(.command) || flags.contains(.control) || flags.contains(.option)
-        if isShift && !hasOther {
-            shiftPending = true
-            return false
+    /// One observer for both the IMK event and the modifier-only fallback.
+    /// Releasing Control while holding Shift must not start a bare-Shift press.
+    func observeModifiers(_ event: NSEvent) {
+        guard engine.settings.shiftTogglesEnglish, event.keyCode == 56 || event.keyCode == 60 else {
+            shiftPending = false
+            return
         }
-        if !isShift && shiftPending {
+        let flags = event.modifierFlags
+        if flags.contains(.shift) {
+            shiftPending = flags.intersection([.control, .option, .command]).isEmpty
+        } else if shiftPending {
             shiftPending = false
             toggleModeWithHUD()
-        } else {
-            shiftPending = false
         }
-        return false
     }
 
     private func handleKeyDown(_ event: NSEvent, client: IMKTextInput) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if flags.contains(.command) || flags.contains(.control) || flags.contains(.option) {
-            return false
-        }
-        if flags.contains(.shift) { shiftPending = false }
+        shiftPending = false
+        // Modified keys belong to the client, including former scheme shortcuts.
+        if !flags.intersection([.command, .control, .option]).isEmpty { return false }
 
         let raw = event.charactersIgnoringModifiers ?? ""
 
@@ -185,10 +189,11 @@ final class WubiInputController: IMKInputController {
             return true
         }
 
-        // Latin letters build the code.
-        if let character = raw.first, character.isASCII, character.isLetter {
+        // A plain apostrophe separates pinyin syllables inside a composition.
+        let separator = raw == "'" && !flags.contains(.shift) && engine.isActive && engine.settings.inputScheme != .wubi
+        if let character = raw.first, (character.isASCII && character.isLetter) || separator {
             guard chineseMode else { return false }
-            if engine.buffer.count >= WubiCode.maxCodeLength {
+            if engine.settings.inputScheme == .wubi && engine.buffer.count >= WubiCode.maxCodeLength {
                 // A fifth key flushes whatever is pending and starts fresh.
                 guard let text = engine.commitFirst() else {
                     engine.reset()
@@ -237,23 +242,23 @@ final class WubiInputController: IMKInputController {
         return false
     }
 
-    /// Flips Chinese/English, clearing any composition and announcing the new
-    /// mode with the badge.
-    /// Starts watching a possible bare Shift press.
-    func beginShiftObservation() {
-        shiftPending = true
-    }
-
-    /// Called by the global modifier monitor when Shift is released alone.
-    func handleBareShiftRelease() {
-        guard engine.settings.shiftTogglesEnglish, shiftPending else { return }
-        shiftPending = false
-        toggleModeWithHUD()
-    }
-
-    /// Any real key cancels the pending toggle, so Shift+letter still types.
-    func noteShiftCancelled() {
-        shiftPending = false
+    private func selectScheme(_ target: InputScheme) {
+        let client: IMKTextInput? = activeClient ?? self.client()
+        if target != engine.settings.inputScheme {
+            // Commit the marked range as the original code, not the highlighted
+            // candidate. Changing engine.settings would otherwise discard it.
+            if engine.isActive {
+                guard let client else { return }
+                commit(engine.buffer, client: client)
+            }
+            var latest = WubiSettings.load()
+            latest.inputScheme = target
+            engine.settings = latest
+            punctuation.reset()
+            latest.save()
+        }
+        chineseMode = true
+        if engine.settings.showModeHUD { hud.show(scheme: target, near: client.map { caretRect(client: $0) }) }
     }
 
     /// Flips Chinese/English. Anything already composed is committed first, so
@@ -314,7 +319,7 @@ final class WubiInputController: IMKInputController {
             panel.orderOut(nil)
             return
         }
-        var hint = engine.codeHint
+        var hint = [engine.settings.inputScheme.displayName, engine.codeHint].filter { !$0.isEmpty }.joined(separator: " · ")
         if engine.pageCount > 1 {
             hint += "  " + String(engine.page + 1) + "/" + String(engine.pageCount)
         }
@@ -362,57 +367,60 @@ final class WubiInputController: IMKInputController {
     override func menu() -> NSMenu! {
         let menu = NSMenu(title: "五笔")
 
-        let status = NSMenuItem(title: "五笔 86 · 轻量版", action: nil, keyEquivalent: "")
-        status.isEnabled = false
-        menu.addItem(status)
+        let schemes: [(InputScheme, Selector)] = [
+            (.wubi, #selector(chooseWubi(_:))), (.pinyin, #selector(choosePinyin(_:))),
+            (.mixed, #selector(chooseMixed(_:)))
+        ]
+        for (scheme, action) in schemes {
+            let item = menu.addItem(withTitle: scheme.displayName, action: action, keyEquivalent: "")
+            item.target = self
+            item.state = scheme == engine.settings.inputScheme ? .on : .off
+        }
         menu.addItem(.separator())
-
-        let toggle = NSMenuItem(title: "切换中/英文", action: #selector(toggleMode), keyEquivalent: "")
-        toggle.target = self
-        menu.addItem(toggle)
-
-        let prefs = NSMenuItem(title: "偏好设置…", action: #selector(openPreferences), keyEquivalent: ",")
-        prefs.target = self
-        menu.addItem(prefs)
-
-        let folder = NSMenuItem(title: "打开配置文件夹", action: #selector(openSettingsFolder), keyEquivalent: "")
-        folder.target = self
-        menu.addItem(folder)
-
-        let reset = NSMenuItem(title: "清除用户词频", action: #selector(resetLexicon), keyEquivalent: "")
-        reset.target = self
-        menu.addItem(reset)
+        menu.addItem(withTitle: "切换中/英文", action: #selector(toggleMode(_:)), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "偏好设置…", action: #selector(openPreferences(_:)), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "打开配置文件夹", action: #selector(openSettingsFolder(_:)), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "清除用户词频", action: #selector(resetLexicon(_:)), keyEquivalent: "").target = self
 
         return menu
     }
 
     /// Picks up edits made in the settings window without restarting the method.
     @objc private func settingsChanged() {
-        engine.settings = WubiSettings.load()
+        let composing = engine.isActive
+        let latest = WubiSettings.load()
+        if composing, latest.inputScheme != engine.settings.inputScheme, let client = activeClient {
+            commit(engine.buffer, client: client)
+        }
+        engine.settings = latest
+        if composing, let client = activeClient { refresh(client: client) }
     }
 
-    @objc private func toggleMode() {
-        chineseMode.toggle()
-    }
+    // IMK sends each action to the controller with a command dictionary, not
+    // an NSMenuItem. Distinct selectors do not depend on item tags surviving.
+    @objc private func chooseWubi(_ sender: Any) { selectScheme(.wubi) }
+    @objc private func choosePinyin(_ sender: Any) { selectScheme(.pinyin) }
+    @objc private func chooseMixed(_ sender: Any) { selectScheme(.mixed) }
+    @objc private func toggleMode(_ sender: Any) { toggleModeWithHUD() }
 
     /// Launches the bundled settings app.
-    @objc private func openPreferences() {
+    @objc private func openPreferences(_ sender: Any) {
         let url = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Applications/WubiSettings.app")
         if FileManager.default.fileExists(atPath: url.path) {
             NSWorkspace.shared.open(url)
         } else {
-            openSettingsFolder()
+            openSettingsFolder(sender)
         }
     }
 
-    @objc private func openSettingsFolder() {
+    @objc private func openSettingsFolder(_ sender: Any) {
         let url = WubiSettings.supportDirectory
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         NSWorkspace.shared.open(url)
     }
 
-    @objc private func resetLexicon() {
+    @objc private func resetLexicon(_ sender: Any) {
         UserLexicon.shared.reset()
     }
 }

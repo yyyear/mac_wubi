@@ -9,7 +9,8 @@ func usage() {
     wubi-cli -- 五笔86 引擎命令行
 
       wubi-cli lookup <code>                列出某编码的全部候选
-      wubi-cli type <keys>                  逐键模拟输入（如 wqiy）
+      wubi-cli type <keys> [wubi|pinyin|mixed] 逐键模拟输入（如 nihao mixed）
+      wubi-cli import <pinyin|wubi> <file>   增量导入本机词库
       wubi-cli bench [iterations]           吞吐量测试
       wubi-cli stats                        字典统计
       wubi-cli commit <code> <n>            模拟选中第 n 个候选（学习/排序）
@@ -35,13 +36,16 @@ func runLookup(_ code: String) {
     if candidates.isEmpty { print("  (无)") }
 }
 
-func runType(_ keys: String) {
-    let engine = InputEngine(settings: WubiSettings())
+func runType(_ keys: String, scheme: InputScheme) {
+    var settings = WubiSettings.load()
+    settings.inputScheme = scheme
+    settings.userLearning = false
+    let engine = InputEngine(settings: settings)
     print("输入: \(keys)")
     for character in keys {
         let committed = engine.append(character)
         let page = engine.pageCandidates.map { $0.text }.joined(separator: " ")
-        print("  \(engine.buffer.padding(toLength: 5, withPad: " ", startingAt: 0)) -> [\(page)]  \(engine.codeHint)")
+        print("  \(engine.buffer) -> [\(page)]  \(engine.codeHint)")
         if let committed { print("  自动上屏: \(committed)"); break }
     }
 }
@@ -68,7 +72,15 @@ case "lookup":
     runLookup(code)
 case "type":
     guard let keys = arguments.first else { usage(); exit(2) }
-    runType(keys)
+    guard let scheme = InputScheme(rawValue: arguments.dropFirst().first ?? WubiSettings.load().inputScheme.rawValue) else { usage(); exit(2) }
+    runType(keys, scheme: scheme)
+case "import":
+    guard arguments.count == 2, let scheme = InputScheme(rawValue: arguments[0]), scheme != .mixed else { usage(); exit(2) }
+    do {
+        let n = try DictionaryImporter.importFile(URL(fileURLWithPath: arguments[1]), scheme: scheme)
+        DistributedNotificationCenter.default().postNotificationName(LexiconEvents.changed, object: nil, userInfo: nil, deliverImmediately: true)
+        print("新增 \(n) 条；已有条目按较高权重保留。")
+    } catch { FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8)); exit(1) }
 case "bench":
     runBench(Int(arguments.first ?? "2000") ?? 2000)
 case "stats":

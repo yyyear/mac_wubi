@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>四方五笔</title>
+    <organization>com.sifang</organization>
+    <domains enable_localSystem="true" enable_currentUserHome="false" enable_anywhere="false"/>
+    <options customize="never" require-scripts="true" rootVolumeOnly="true" hostArchitectures="arm64,x86_64"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="13.0"/>
+        </allowed-os-versions>
+    </volume-check>
+
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <license file="license.txt" mime-type="text/plain"/>
+
+    <choices-outline>
+        <line choice="default">
+            <line choice="wubi"/>
+        </line>
+    </choices-outline>
+
+    <choice id="default"/>
+    <choice id="wubi" visible="false">
+        <pkg-ref id="com.sifang.wubi.pkg"/>
+    </choice>
+
+    <pkg-ref id="com.sifang.wubi.pkg" version="__VERSION__" onConclusion="none">wubi.pkg</pkg-ref>
+</installer-gui-script>

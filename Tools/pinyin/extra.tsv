@@ -1,0 +1,393 @@
+# word / full reading / estimated upstream-scale weight
+微信	wei xin	28000
+支付宝	zhi fu bao	8000
+二维码	er wei ma	5000
+扫码	sao ma	4500
+高铁	gao tie	8000
+网约车	wang yue che	1300
+外卖	wai mai	6500
+快递	kuai di	7500
+取件码	qu jian ma	1600
+验证码	yan zheng ma	4500
+朋友圈	peng you quan	3300
+小程序	xiao cheng xu	3000
+短视频	duan shi pin	2500
+直播间	zhi bo jian	1700
+手机支付	shou ji zhi fu	1800
+输入法	shu ru fa	5800
+全拼	quan pin	1200
+四方五笔	si fang wu bi	1500
+轻量五笔输入法	qing liang wu bi shu ru fa	500
+候选词	hou xuan ci	1100
+生僻字	sheng pi zi	800
+多音字	duo yin zi	1600
+没问题	mei wen ti	9000
+不客气	bu ke qi	5300
+辛苦了	xin ku le	3700
+知道了	zhi dao le	8000
+收到了	shou dao le	5000
+等一下	deng yi xia	5300
+等一会儿	deng yi hui er	2300
+不好意思	bu hao yi si	6300
+早上好	zao shang hao	4800
+晚上好	wan shang hao	2400
+回头见	hui tou jian	1600
+明天见	ming tian jian	2600
+没关系	mei guan xi	4200
+没事儿	mei shi er	1600
+一会儿见	yi hui er jian	900
+麻烦你了	ma fan ni le	1200
+谢谢你	xie xie ni	3400
+开个会	kai ge hui	500
+共享屏幕	gong xiang ping mu	1100
+视频会议	shi pin hui yi	1700
+在线文档	zai xian wen dang	900
+垃圾分类	la ji fen lei	1600
+充电宝	chong dian bao	1800
+人工智能	ren gong zhi neng	4500
+大模型	da mo xing	2000
+
+# 问候与关心：人工选词与注音；仅加入旧表没有精确匹配的编码。
+早呀	zao ya	500
+早上好呀	zao shang hao ya	500
+中午好呀	zhong wu hao ya	500
+晚上好呀	wan shang hao ya	500
+好久不见了	hao jiu bu jian le	500
+最近怎么样	zui jin zen me yang	500
+最近还好吗	zui jin hai hao ma	500
+好久没聊了	hao jiu mei liao le	500
+周末快乐	zhou mo kuai le	500
+周末愉快	zhou mo yu kuai	500
+假期愉快	jia qi yu kuai	500
+新的一周	xin de yi zhou	500
+新年快乐呀	xin nian kuai le ya	500
+节日快乐呀	jie ri kuai le ya	500
+生日快乐呀	sheng ri kuai le ya	500
+新婚快乐	xin hun kuai le	500
+一路平安	yi lu ping an	500
+一路顺风呀	yi lu shun feng ya	500
+旅途愉快	lv tu yu kuai	500
+万事顺意	wan shi shun yi	500
+好好休息	hao hao xiu xi	500
+早点休息吧	zao dian xiu xi ba	500
+睡个好觉	shui ge hao jiao	500
+做个好梦	zuo ge hao meng	500
+明天再聊	ming tian zai liao	500
+回头再聊	hui tou zai liao	500
+等你消息	deng ni xiao xi	500
+有空再聊	you kong zai liao	500
+记得吃饭	ji de chi fan	500
+多喝点水	duo he dian shui	500
+注意保暖	zhu yi bao nuan	500
+路上小心	lu shang xiao xin	500
+注意安全呀	zhu yi an quan ya	500
+到了说一声	dao le shuo yi sheng	500
+平安到家	ping an dao jia	500
+替我问好	ti wo wen hao	500
+周末见	zhou mo jian	500
+下周见	xia zhou jian	500
+周一见	zhou yi jian	500
+下次再约	xia ci zai yue	500
+下回见	xia hui jian	500
+
+# 聊天与回复：人工选词与注音；仅加入旧表没有精确匹配的编码。
+好的收到	hao de shou dao	500
+好的谢谢	hao de xie xie	500
+好的没问题	hao de mei wen ti	500
+好的我知道了	hao de wo zhi dao le	500
+好的我看看	hao de wo kan kan	500
+好的稍等	hao de shao deng	500
+好嘞收到	hao lei shou dao	500
+嗯嗯好的	en en hao de	500
+没事没事	mei shi mei shi	500
+不用着急	bu yong zhao ji	500
+不用谢啦	bu yong xie la	500
+不着急的	bu zhao ji de	500
+慢慢来吧	man man lai ba	500
+可以的呀	ke yi de ya	500
+当然可以呀	dang ran ke yi ya	500
+完全没问题	wan quan mei wen ti	500
+没问题的	mei wen ti de	500
+没问题呀	mei wen ti ya	500
+我没意见	wo mei yi jian	500
+我也觉得	wo ye jue de	500
+我也是这么想的	wo ye shi zhe me xiang de	500
+就这么定了	jiu zhe me ding le	500
+这样就好	zhe yang jiu hao	500
+明白你的意思	ming bai ni de yi si	500
+了解了谢谢	liao jie le xie xie	500
+我知道啦	wo zhi dao la	500
+我记住了	wo ji zhu le	500
+我收到了	wo shou dao le	500
+我看到了	wo kan dao le	500
+我听到了	wo ting dao le	500
+已经收到	yi jing shou dao	500
+收到谢谢	shou dao xie xie	500
+收到请回复	shou dao qing hui fu	500
+辛苦大家了	xin ku da jia le	500
+辛苦你了	xin ku ni le	500
+太感谢了	tai gan xie le	500
+谢谢提醒	xie xie ti xing	500
+谢谢关心	xie xie guan xin	500
+谢谢理解	xie xie li jie	500
+谢谢配合	xie xie pei he	500
+谢谢帮忙	xie xie bang mang	500
+谢谢你的帮助	xie xie ni de bang zhu	500
+麻烦您了	ma fan nin le	500
+给你添麻烦了	gei ni tian ma fan le	500
+抱歉久等了	bao qian jiu deng le	500
+让你久等了	rang ni jiu deng le	500
+刚看到消息	gang kan dao xiao xi	500
+刚刚没看到	gang gang mei kan dao	500
+我刚看到	wo gang kan dao	500
+回得有点晚	hui de you dian wan	500
+打扰一下	da rao yi xia	500
+方便说话吗	fang bian shuo hua ma	500
+现在方便吗	xian zai fang bian ma	500
+可以打电话吗	ke yi da dian hua ma	500
+稍后联系你	shao hou lian xi ni	500
+我一会儿回复	wo yi hui er hui fu	500
+等我一下	deng wo yi xia	500
+请稍等一下	qing shao deng yi xia	500
+给我一分钟	gei wo yi fen zhong	500
+稍后说	shao hou shuo	500
+我在忙呢	wo zai mang ne	500
+你先忙吧	ni xian mang ba	500
+有事随时联系	you shi sui shi lian xi	500
+需要帮忙吗	xu yao bang mang ma	500
+我来帮忙	wo lai bang mang	500
+别放在心上	bie fang zai xin shang	500
+不用放在心上	bu yong fang zai xin shang	500
+没关系的	mei guan xi de	500
+我能理解	wo neng li jie	500
+真的太好了	zhen de tai hao le	500
+
+# 见面与出行：人工选词与注音；仅加入旧表没有精确匹配的编码。
+我在路上	wo zai lu shang	500
+我出门了	wo chu men le	500
+我刚出门	wo gang chu men	500
+我刚出发	wo gang chu fa	500
+准备出发了	zhun bei chu fa le	500
+我马上出门	wo ma shang chu men	500
+快到门口了	kuai dao men kou le	500
+我快到了	wo kuai dao le	500
+马上就到了	ma shang jiu dao le	500
+我到楼下了	wo dao lou xia le	500
+我在门口	wo zai men kou	500
+我在楼下等你	wo zai lou xia deng ni	500
+我就在附近	wo jiu zai fu jin	500
+我在地铁上	wo zai di tie shang	500
+我在公交车上	wo zai gong jiao che shang	500
+刚上车	gang shang che	500
+刚下地铁	gang xia di tie	500
+到站了告诉我	dao zhan le gao su wo	500
+你到哪儿了	ni dao na er le	500
+你到了吗	ni dao le ma	500
+你到家了吗	ni dao jia le ma	500
+到家了吗	dao jia le ma	500
+我到家了	wo dao jia le	500
+到家报个平安	dao jia bao ge ping an	500
+在门口集合	zai men kou ji he	500
+你先进去	ni xian jin qu	500
+帮我留个位置	bang wo liu ge wei zhi	500
+晚一点到	wan yi dian dao	500
+路上有点堵	lu shang you dian du	500
+大概还要十分钟	da gai hai yao shi fen zhong	500
+我等下一班	wo deng xia yi ban	500
+发个定位	fa ge ding wei	500
+把地址发我	ba di zhi fa wo	500
+在哪儿见面	zai na er jian mian	500
+我们几点见	wo men ji dian jian	500
+今天几点见	jin tian ji dian jian	500
+老地方见	lao di fang jian	500
+改天再约	gai tian zai yue	500
+换个时间吧	huan ge shi jian ba	500
+下午有空吗	xia wu you kong ma	500
+明天方便吗	ming tian fang bian ma	500
+周末有空吗	zhou mo you kong ma	500
+一会儿出门	yi hui er chu men	500
+晚点再出发	wan dian zai chu fa	500
+记得带伞	ji de dai san	500
+出门带把伞	chu men dai ba san	500
+手机快没电了	shou ji kuai mei dian le	500
+我先充个电	wo xian chong ge dian	500
+信号不太好	xin hao bu tai hao	500
+导航发我一下	dao hang fa wo yi xia	500
+
+# 办公与协作：人工选词与注音；仅加入旧表没有精确匹配的编码。
+我看一下	wo kan yi xia	500
+我确认一下	wo que ren yi xia	500
+我问一下	wo wen yi xia	500
+我核对一下	wo he dui yi xia	500
+我再检查一下	wo zai jian cha yi xia	500
+我整理一下	wo zheng li yi xia	500
+我来跟进	wo lai gen jin	500
+我来处理	wo lai chu li	500
+我来安排	wo lai an pai	500
+我马上处理	wo ma shang chu li	500
+处理完了	chu li wan le	500
+处理好了	chu li hao le	500
+已经处理好了	yi jing chu li hao le	500
+我这边没问题	wo zhe bian mei wen ti	500
+请帮忙确认	qing bang mang que ren	500
+请确认一下	qing que ren yi xia	500
+有空看一下	you kong kan yi xia	500
+帮我看一下	bang wo kan yi xia	500
+请查收附件	qing cha shou fu jian	500
+请查收邮件	qing cha shou you jian	500
+附件已发送	fu jian yi fa song	500
+文件发你了	wen jian fa ni le	500
+把文件发给我	ba wen jian fa gei wo	500
+把链接发给我	ba lian jie fa gei wo	500
+链接发你了	lian jie fa ni le	500
+我发到群里	wo fa dao qun li	500
+发我一份	fa wo yi fen	500
+稍后发给你	shao hou fa gei ni	500
+稍后同步	shao hou tong bu	500
+我稍后同步	wo shao hou tong bu	500
+我更新一下	wo geng xin yi xia	500
+已更新文档	yi geng xin wen dang	500
+文档更新了	wen dang geng xin le	500
+以这个版本为准	yi zhe ge ban ben wei zhun	500
+请看最新版本	qing kan zui xin ban ben	500
+我补充一下	wo bu chong yi xia	500
+有个小问题	you ge xiao wen ti	500
+这个怎么操作	zhe ge zen me cao zuo	500
+有进展吗	you jin zhan ma	500
+进度怎么样	jin du zen me yang	500
+有进展再同步	you jin zhan zai tong bu	500
+进度已更新	jin du yi geng xin	500
+我已经提交了	wo yi jing ti jiao le	500
+请帮忙审核	qing bang mang shen he	500
+麻烦确认一下	ma fan que ren yi xia	500
+等你确认	deng ni que ren	500
+确认无误	que ren wu wu	500
+可以继续了	ke yi ji xu le	500
+可以开始了	ke yi kai shi le	500
+请稍后再试	qing shao hou zai shi	500
+麻烦再发一次	ma fan zai fa yi ci	500
+没有收到附件	mei you shou dao fu jian	500
+我这边打不开	wo zhe bian da bu kai	500
+我没有权限	wo mei you quan xian	500
+需要申请权限	xu yao shen qing quan xian	500
+申请已提交	shen qing yi ti jiao	500
+已经发过去了	yi jing fa guo qu le	500
+请看一下群消息	qing kan yi xia qun xiao xi	500
+有问题随时说	you wen ti sui shi shuo	500
+如果有问题	ru guo you wen ti	500
+请在群里回复	qing zai qun li hui fu	500
+谢谢大家配合	xie xie da jia pei he	500
+
+# 会议与日程：人工选词与注音；仅加入旧表没有精确匹配的编码。
+会议几点开始	hui yi ji dian kai shi	500
+会议链接在哪里	hui yi lian jie zai na li	500
+发一下会议链接	fa yi xia hui yi lian jie	500
+会议室在哪儿	hui yi shi zai na er	500
+会议已经开始	hui yi yi jing kai shi	500
+可以进会议了	ke yi jin hui yi le	500
+大家能听到吗	da jia neng ting dao ma	500
+听得到吗	ting de dao ma	500
+能听到我说话吗	neng ting dao wo shuo hua ma	500
+能看到屏幕吗	neng kan dao ping mu ma	500
+你这边静音了	ni zhe bian jing yin le	500
+请打开麦克风	qing da kai mai ke feng	500
+麻烦关一下麦克风	ma fan guan yi xia mai ke feng	500
+请共享屏幕	qing gong xiang ping mu	500
+我共享一下屏幕	wo gong xiang yi xia ping mu	500
+稍等我切一下	shao deng wo qie yi xia	500
+声音有点小	sheng yin you dian xiao	500
+声音断断续续	sheng yin duan duan xu xu	500
+我重新进一下	wo chong xin jin yi xia	500
+刚才有点卡	gang cai you dian ka	500
+可以再说一遍吗	ke yi zai shuo yi bian ma	500
+今天就到这里	jin tian jiu dao zhe li	500
+会后再讨论	hui hou zai tao lun	500
+会议纪要发群里	hui yi ji yao fa qun li	500
+我先记下来	wo xian ji xia lai	500
+明天再确认	ming tian zai que ren	500
+来得及吗	lai de ji ma	500
+需要多久	xu yao duo jiu	500
+提前说一声	ti qian shuo yi sheng	500
+我们约个时间	wo men yue ge shi jian	500
+我看下日程	wo kan xia ri cheng	500
+我这会儿有空	wo zhe hui er you kong	500
+我在开会	wo zai kai hui	500
+开完会联系你	kai wan hui lian xi ni	500
+会后联系	hui hou lian xi	500
+中午休息一下	zhong wu xiu xi yi xia	500
+
+# 家庭与用餐：人工选词与注音；仅加入旧表没有精确匹配的编码。
+中午吃什么	zhong wu chi shen me	500
+晚上吃什么	wan shang chi shen me	500
+想吃点什么	xiang chi dian shen me	500
+一起吃饭吗	yi qi chi fan ma	500
+吃过饭了吗	chi guo fan le ma	500
+我去买菜	wo qu mai cai	500
+我去做饭	wo qu zuo fan	500
+饭做好了	fan zuo hao le	500
+等你回来吃饭	deng ni hui lai chi fan	500
+我来点外卖	wo lai dian wai mai	500
+你想喝什么	ni xiang he shen me	500
+少冰少糖	shao bing shao tang	500
+不要放辣	bu yao fang la	500
+不要香菜	bu yao xiang cai	500
+打包带走	da bao dai zou	500
+请问有位吗	qing wen you wei ma	500
+两位有位吗	liang wei you wei ma	500
+一会儿就好	yi hui er jiu hao	500
+不用等我吃饭	bu yong deng wo chi fan	500
+要带点什么	yao dai dian shen me	500
+我顺路买	wo shun lu mai	500
+我顺路带过去	wo shun lu dai guo qu	500
+记得带钥匙	ji de dai yao shi	500
+帮我开下门	bang wo kai xia men	500
+我来收拾	wo lai shou shi	500
+衣服收了吗	yi fu shou le ma	500
+今天有点冷	jin tian you dian leng	500
+外面下雨了	wai mian xia yu le	500
+天冷多穿点	tian leng duo chuan dian	500
+我去接你	wo qu jie ni	500
+我去接孩子	wo qu jie hai zi	500
+不用来接我	bu yong lai jie wo	500
+一会儿给你打电话	yi hui er gei ni da dian hua	500
+刚才在洗澡	gang cai zai xi zao	500
+别熬夜了	bie ao ye le	500
+这两天有点忙	zhe liang tian you dian mang	500
+我们明天见	wo men ming tian jian	500
+记得早点睡	ji de zao dian shui	500
+醒了告诉我	xing le gao su wo	500
+等会儿一起走	deng hui er yi qi zou	500
+
+# 购物与服务：人工选词与注音；仅加入旧表没有精确匹配的编码。
+快递到了吗	kuai di dao le ma	500
+快递放门口	kuai di fang men kou	500
+放在门口就好	fang zai men kou jiu hao	500
+麻烦送到楼下	ma fan song dao lou xia	500
+我下楼取	wo xia lou qu	500
+取件码是多少	qu jian ma shi duo shao	500
+我去取快递	wo qu qu kuai di	500
+收到货了	shou dao huo le	500
+还没收到货	hai mei shou dao huo	500
+请问什么时候发货	qing wen shen me shi hou fa huo	500
+可以改地址吗	ke yi gai di zhi ma	500
+麻烦帮我改一下	ma fan bang wo gai yi xia	500
+已经付款了	yi jing fu kuan le	500
+可以开发票吗	ke yi kai fa piao ma	500
+发票抬头是	fa piao tai tou shi	500
+电子发票发邮箱	dian zi fa piao fa you xiang	500
+麻烦发一下收款码	ma fan fa yi xia shou kuan ma	500
+我扫给你	wo sao gei ni	500
+我已经转了	wo yi jing zhuan le	500
+麻烦看下到账没	ma fan kan xia dao zhang mei	500
+有现货吗	you xian huo ma	500
+现在还有吗	xian zai hai you ma	500
+我再看看	wo zai kan kan	500
+可以帮我留一下吗	ke yi bang wo liu yi xia ma	500
+请问怎么预约	qing wen zen me yu yue	500
+需要提前预约吗	xu yao ti qian yu yue ma	500
+预约成功了	yu yue cheng gong le	500
+需要带什么	xu yao dai shen me	500
+身份证带了吗	shen fen zheng dai le ma	500
+订单号是多少	ding dan hao shi duo shao	500
+请问可以退款吗	qing wen ke yi tui kuan ma	500
+我再联系一下	wo zai lian xi yi xia	500

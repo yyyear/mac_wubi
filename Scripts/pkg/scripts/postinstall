@@ -1,0 +1,36 @@
+#!/bin/bash
+# The payload is system-wide but the enabled sources belong to the user.
+set -eu
+HELPER="/Library/Input Methods/WubiInput.app/Contents/MacOS/WubiInput"
+if [[ "${3:-/}" != / ]]; then
+    echo 'postinstall: offline target; enable 四方五笔 after login'
+    exit 0
+fi
+[[ -x "$HELPER" ]] || { echo 'postinstall: missing registration helper' >&2; exit 1; }
+CONSOLE_USER="$(/usr/bin/stat -f %Su /dev/console)"
+case "$CONSOLE_USER" in ''|root|loginwindow|_*) echo 'postinstall: enable 四方五笔 after login'; exit 0;; esac
+CONSOLE_UID="$(/usr/bin/id -u "$CONSOLE_USER")"
+# Avoid an ambiguous choice between bundles with the same source IDs.
+if /usr/bin/sudo -H -u "$CONSOLE_USER" /bin/sh -c 'test -d "$HOME/Library/Input Methods/WubiInput.app"'; then
+    echo 'postinstall: another user copy exists; resolve duplicate installations before enabling' >&2
+    exit 0
+fi
+# Installer replaces the file, but IMK can keep yesterday's executable mapped.
+# Only refresh the console user's instance at this exact path if its executable
+# inode differs. Do not restart another IME, or start a previously inactive one.
+disk_inode="$(/usr/bin/stat -f %i "$HELPER")"
+for pid in $(/usr/bin/pgrep -xu "$CONSOLE_UID" WubiInput || :); do
+    [[ "$(/bin/ps -p "$pid" -o comm=)" == "$HELPER" ]] || continue
+    mapped_inode="$(/usr/sbin/lsof -a -p "$pid" -d txt -Fin 2>/dev/null | /usr/bin/awk -v exe="$HELPER" '/^i/ {inode=substr($0,2)} $0=="n" exe {print inode; exit}')"
+    [[ -n "$mapped_inode" && "$mapped_inode" != "$disk_inode" ]] || continue
+    /usr/bin/sudo -u "$CONSOLE_USER" /bin/kill -TERM "$pid" || continue
+    for ((i=0; i<20; i++)); do /bin/kill -0 "$pid" 2>/dev/null || break; /bin/sleep 0.1; done
+    if ! /bin/kill -0 "$pid" 2>/dev/null; then
+        /bin/launchctl asuser "$CONSOLE_UID" /usr/bin/sudo -H -u "$CONSOLE_USER" /usr/bin/open -g "${HELPER%/Contents/MacOS/*}" || :
+    fi
+done
+# Run once. Do not kill other users’ agents, switch the current input source,
+# or retry registration in a loop. The installed helper verifies via TIS.
+if ! /bin/launchctl asuser "$CONSOLE_UID" /usr/bin/sudo -H -u "$CONSOLE_USER" "$HELPER" --ensure-input-mode; then
+    echo 'postinstall: payload installed; enable 四方五笔 in Keyboard settings after login' >&2
+fi

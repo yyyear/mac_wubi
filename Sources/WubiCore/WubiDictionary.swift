@@ -6,6 +6,11 @@ public struct WubiCandidate: Equatable, Sendable {
     public let isWord: Bool
     public let isSimpleCode: Bool
 
+    /// Independent of the lookup spelling; only resolve for visible candidates.
+    public var fullWubiCode: String? {
+        BundledWubiCodes.code(for: text) ?? SupplementalLexicon.shared.importedFullCode(for: text)
+    }
+
     init(text: String, weight: UInt16, flags: UInt8) {
         self.text = text
         self.weight = weight

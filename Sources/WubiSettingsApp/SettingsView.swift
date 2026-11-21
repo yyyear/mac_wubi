@@ -204,7 +204,10 @@ struct CandidatePane: View {
             SettingRow(title: "显示前缀候选", subtitle: "同时显示以当前编码开头的其他词") {
                 Toggle("显示前缀候选", isOn: $store.settings.prefixCandidates).labelsHidden().toggleStyle(.switch)
             }
-            SettingRow(title: "显示编码提示") {
+            SettingRow(title: "显示完整五笔编码", subtitle: "在候选字词旁显示五笔全码；没有已知编码时留空") {
+                Toggle("显示完整五笔编码", isOn: $store.settings.showFullWubiCode).labelsHidden().toggleStyle(.switch)
+            }
+            SettingRow(title: "显示编码提示", subtitle: "提示可续码、重码等输入状态") {
                 Toggle("显示编码提示", isOn: $store.settings.showCodeHint).labelsHidden().toggleStyle(.switch)
             }
             SettingRow(title: "按上屏概率排序", subtitle: "记录实际选择过的词，越常用越靠前") {
@@ -261,7 +264,7 @@ struct ShortcutPane: View {
     private let items: [(String, String)] = [
         ("a–z", "输入五笔编码或全拼（ü 用 v）"),
         ("空格", "上屏第一个候选"),
-        ("1–9", "上屏对应候选"),
+        ("1–9 / 0", "按当前页序号选词，0 选第 10 个"),
         (", . / ← →", "候选翻页"),
         ("回车", "上屏当前编码原文"),
         ("Esc", "取消当前编码"),

@@ -29,6 +29,8 @@ public struct WubiSettings: Codable, Equatable, Sendable {
     public var userLearning: Bool = true
     /// Show a progress hint when the typed code has longer codes behind it.
     public var showCodeHint: Bool = true
+    /// Show the full Wubi spelling beside each candidate when known.
+    public var showFullWubiCode: Bool = true
     /// Also list candidates whose code merely starts with what was typed.
     public var prefixCandidates: Bool = true
     /// Number of candidate rows kept per lookup.
@@ -57,6 +59,7 @@ public struct WubiSettings: Codable, Equatable, Sendable {
         pageSize = try values.decodeIfPresent(Int.self, forKey: .pageSize) ?? pageSize
         userLearning = try values.decodeIfPresent(Bool.self, forKey: .userLearning) ?? userLearning
         showCodeHint = try values.decodeIfPresent(Bool.self, forKey: .showCodeHint) ?? showCodeHint
+        showFullWubiCode = try values.decodeIfPresent(Bool.self, forKey: .showFullWubiCode) ?? showFullWubiCode
         prefixCandidates = try values.decodeIfPresent(Bool.self, forKey: .prefixCandidates) ?? prefixCandidates
         candidateLimit = try values.decodeIfPresent(Int.self, forKey: .candidateLimit) ?? candidateLimit
     }

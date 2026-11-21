@@ -26,8 +26,7 @@ final class WubiInputController: IMKInputController {
         super.init(server: server, delegate: delegate, client: inputClient)
         panel.onSelect = { [weak self] offset in
             guard let self, let client = self.activeClient else { return }
-            let index = self.engine.page * self.engine.pageSize + offset
-            if let text = self.engine.commit(index: index) {
+            if let text = self.engine.commit(pageNumber: offset + 1) {
                 self.commit(text, client: client)
             }
         }
@@ -183,17 +182,18 @@ final class WubiInputController: IMKInputController {
         }
 
         // Candidate numbers.
-        if engine.isActive, let digit = Int(raw), (1...9).contains(digit) {
-            guard let text = engine.commit(pageNumber: digit) else { return false }
+        if engine.isActive, raw.count == 1, let digit = Int(raw), (0...9).contains(digit) {
+            guard let text = engine.commit(pageNumber: digit == 0 ? 10 : digit) else { return false }
             commit(text, client: client)
             return true
         }
 
         // A plain apostrophe separates pinyin syllables inside a composition.
-        let separator = raw == "'" && !flags.contains(.shift) && engine.isActive && engine.settings.inputScheme != .wubi
-        if let character = raw.first, (character.isASCII && character.isLetter) || separator {
+        let typed = event.characters ?? raw
+        let separator = typed == "'" && !flags.contains(.shift) && engine.isActive && engine.settings.inputScheme != .wubi
+        if typed.count == 1, let character = typed.first, (character.isASCII && character.isLetter) || separator {
             guard chineseMode else { return false }
-            if engine.settings.inputScheme == .wubi && engine.buffer.count >= WubiCode.maxCodeLength {
+            if engine.requiresWubiRollover(before: character) {
                 // A fifth key flushes whatever is pending and starts fresh.
                 guard let text = engine.commitFirst() else {
                     engine.reset()
@@ -267,18 +267,13 @@ final class WubiInputController: IMKInputController {
         if engine.isActive, let client = activeClient {
             // Switching language keeps what was typed as typed: the pending code
             // goes on screen as English letters, not as a Chinese candidate.
-            let raw = engine.buffer
-            engine.reset()
-            panel.orderOut(nil)
-            clearMarked(client)
-            insert(raw, client: client)
+            commit(engine.buffer, client: client)
         }
 
         chineseMode.toggle()
         NSLog("WubiInput: mode -> \(chineseMode ? "中文" : "English")")
         engine.reset()
         punctuation.reset()
-        if let client = activeClient { clearMarked(client) }
         panel.orderOut(nil)
         showModeHUD()
     }
@@ -314,8 +309,7 @@ final class WubiInputController: IMKInputController {
     }
 
     private func showPanel(client: IMKTextInput) {
-        let texts = engine.pageCandidates.map { $0.text }
-        guard !texts.isEmpty else {
+        guard !engine.pageCandidates.isEmpty else {
             panel.orderOut(nil)
             return
         }
@@ -323,7 +317,7 @@ final class WubiInputController: IMKInputController {
         if engine.pageCount > 1 {
             hint += "  " + String(engine.page + 1) + "/" + String(engine.pageCount)
         }
-        panel.update(candidates: texts, firstNumber: engine.pageStartNumber, hint: hint)
+        panel.update(engine: engine, hint: hint)
         panel.orderFront(nil)
         panel.place(near: caretRect(client: client))
     }

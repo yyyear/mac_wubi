@@ -204,9 +204,28 @@ final class EngineTests: XCTestCase {
         guard engine.pageCount > 1 else { return XCTFail("expected multiple pages") }
         XCTAssertTrue(engine.nextPage())
         XCTAssertEqual(engine.page, 1)
-        XCTAssertEqual(engine.pageStartNumber, 4)
+        let firstOnPage = engine.candidates[3].text
+        XCTAssertEqual(engine.pageCandidates.first?.text, firstOnPage)
+        XCTAssertNil(engine.commit(pageNumber: 0))
+        XCTAssertNil(engine.commit(pageNumber: engine.pageCandidates.count + 1))
         XCTAssertTrue(engine.previousPage())
         XCTAssertEqual(engine.page, 0)
+        XCTAssertTrue(engine.nextPage())
+        XCTAssertEqual(engine.commit(pageNumber: 1), firstOnPage)
+    }
+
+    func testTenthCandidateAndPartialLastPage() {
+        let engine = makeEngine(.pinyin) { _, _, prefix, _ in
+            prefix ? [] : (1...13).map { self.word("词" + String($0)) }
+        }
+        engine.settings.pageSize = 10
+        engine.append("a")
+        XCTAssertEqual(engine.commit(pageNumber: 10), "词10")
+        engine.append("a")
+        XCTAssertTrue(engine.nextPage())
+        XCTAssertEqual(engine.pageCandidates.count, 3)
+        XCTAssertNil(engine.commit(pageNumber: 4))
+        XCTAssertEqual(engine.commit(pageNumber: 3), "词13")
     }
 
     func testPrefixCandidatesAreIncluded() {

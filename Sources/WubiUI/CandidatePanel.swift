@@ -1,4 +1,5 @@
 import AppKit
+import WubiCore
 
 /// One candidate cell: small index digit + word, highlight when selected.
 final class CandidateCell: NSView {
@@ -8,7 +9,7 @@ final class CandidateCell: NSView {
 
     override var isFlipped: Bool { true }
 
-    init(number: Int, text: String, highlighted: Bool) {
+    init(number: Int, text: String, code: String?, highlighted: Bool) {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = 5
@@ -18,28 +19,37 @@ final class CandidateCell: NSView {
         numberLabel.textColor = highlighted ? .white : .secondaryLabelColor
         numberLabel.alignment = .center
 
-        textLabel.stringValue = text
-        textLabel.font = .systemFont(ofSize: 16, weight: highlighted ? .medium : .regular)
+        let font = NSFont.systemFont(ofSize: 16, weight: highlighted ? .medium : .regular)
+        let display = CandidateGlyphDisplay.resolve(text, font: font)
+        textLabel.font = font
+        textLabel.stringValue = display.text
+        toolTip = display.toolTip
         textLabel.textColor = highlighted ? .white : .labelColor
         textLabel.lineBreakMode = .byClipping
 
-        for label in [numberLabel, textLabel] {
-            label.translatesAutoresizingMaskIntoConstraints = false
-            label.isBezeled = false
-            label.drawsBackground = false
-            label.isEditable = false
-            label.isSelectable = false
-            addSubview(label)
+        let labels = NSStackView(views: [textLabel])
+        labels.orientation = .vertical
+        labels.alignment = .leading
+        labels.spacing = 0
+        if let code {
+            let codeLabel = NSTextField(labelWithString: code)
+            codeLabel.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
+            codeLabel.textColor = highlighted ? .white : .secondaryLabelColor
+            labels.addArrangedSubview(codeLabel)
+        }
+        for view in [numberLabel, labels] as [NSView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view)
         }
 
         NSLayoutConstraint.activate([
             numberLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
             numberLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            numberLabel.widthAnchor.constraint(equalToConstant: 10),
-            textLabel.leadingAnchor.constraint(equalTo: numberLabel.trailingAnchor, constant: 3),
-            textLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            textLabel.topAnchor.constraint(equalTo: topAnchor, constant: 4),
-            textLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
+            numberLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 10),
+            labels.leadingAnchor.constraint(equalTo: numberLabel.trailingAnchor, constant: 3),
+            labels.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            labels.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            labels.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])
 
         layer?.backgroundColor = highlighted
@@ -48,6 +58,11 @@ final class CandidateCell: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
+
+    // Both the word and its optional code are part of the same click target.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        super.hitTest(point) == nil ? nil : self
+    }
 
     override func mouseDown(with event: NSEvent) {
         onSelect?()
@@ -119,13 +134,14 @@ public final class CandidatePanel: NSPanel {
     public override var canBecomeKey: Bool { false }
     public override var canBecomeMain: Bool { false }
 
-    public func update(candidates: [String], firstNumber: Int, hint: String) {
+    public func update(engine: InputEngine, hint: String) {
         stack.arrangedSubviews.forEach { view in
             stack.removeArrangedSubview(view)
             view.removeFromSuperview()
         }
-        for (offset, text) in candidates.enumerated() {
-            let cell = CandidateCell(number: firstNumber + offset, text: text, highlighted: offset == 0)
+        for (offset, candidate) in engine.pageCandidates.enumerated() {
+            let code = engine.settings.showFullWubiCode ? candidate.fullWubiCode : nil
+            let cell = CandidateCell(number: offset + 1, text: candidate.text, code: code, highlighted: offset == 0)
             cell.onSelect = { [weak self] in self?.onSelect?(offset) }
             stack.addArrangedSubview(cell)
         }

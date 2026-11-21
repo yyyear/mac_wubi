@@ -16,6 +16,26 @@ private struct WordTable {
         }
     }
 
+    /// Imported files contain explicit codes but no simple/full metadata. Select
+    /// the longest spelling supplied for each text; input rows are already sorted
+    /// by code, so equal lengths keep the lexicographically first spelling.
+    func wubiCodesByText() -> [String: String] {
+        data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
+            var result: [String: String] = [:]
+            for (i, start) in starts.enumerated() {
+                let end = i + 1 < starts.count ? starts[i+1] : bytes.count
+                let row = bytes[start..<end]
+                guard let tab = row.firstIndex(of: 9), let lastTab = row.lastIndex(of: 9),
+                      tab > start, tab + 1 < lastTab, tab - start <= WubiCode.maxCodeLength else { continue }
+                let text = String(decoding: bytes[tab+1..<lastTab], as: UTF8.self)
+                if (result[text]?.utf8.count ?? 0) < tab - start {
+                    result[text] = String(decoding: bytes[start..<tab], as: UTF8.self)
+                }
+            }
+            return result
+        }
+    }
+
     func candidates(_ code: String, prefix: Bool, limit: Int) -> [WubiCandidate] {
         guard !code.isEmpty, limit > 0 else { return [] }
         let key = Array(code.utf8)
@@ -77,6 +97,7 @@ final class SupplementalLexicon {
     }()
     private let lock = NSLock()
     private var imported = [InputScheme: WordTable]()
+    private var importedCodes: [String: String]?
 
     private let storeURL: (InputScheme) -> URL?
     init(storeURL: @escaping (InputScheme) -> URL? = DictionaryImporter.indexedStoreURL) {
@@ -86,10 +107,24 @@ final class SupplementalLexicon {
 
     deinit { DistributedNotificationCenter.default().removeObserver(self) }
 
-    @objc func invalidate() { lock.lock(); imported.removeAll(); lock.unlock() }
+    @objc func invalidate() {
+        lock.lock(); defer { lock.unlock() }
+        imported.removeAll()
+        importedCodes = nil
+    }
+
+    func importedFullCode(for text: String) -> String? {
+        lock.lock(); defer { lock.unlock() }
+        if importedCodes == nil { importedCodes = userTableLocked(.wubi).wubiCodesByText() }
+        return importedCodes?[text]
+    }
 
     private func userTable(_ scheme: InputScheme) -> WordTable {
         lock.lock(); defer { lock.unlock() }
+        return userTableLocked(scheme)
+    }
+
+    private func userTableLocked(_ scheme: InputScheme) -> WordTable {
         if let table = imported[scheme] { return table }
         let data = storeURL(scheme).flatMap { url -> Data? in
             guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 32 * 1024 * 1024 else { return nil }

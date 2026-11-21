@@ -13,7 +13,7 @@ let package = Package(
     targets: [
         .target(
             name: "WubiCore",
-            resources: [.copy("Resources/wubi86.bin"), .copy("Resources/pinyin.tsv"), .copy("Resources/Pinyin-NOTICE.txt")]
+            resources: [.copy("Resources/wubi86.bin"), .copy("Resources/wubi86-reverse.tsv"), .copy("Resources/pinyin.tsv"), .copy("Resources/Pinyin-NOTICE.txt")]
         ),
         .target(
             name: "WubiUI",
@@ -43,6 +43,7 @@ let package = Package(
             name: "WubiCLI",
             dependencies: ["WubiCore"]
         ),
+        .testTarget(name: "WubiUITests", dependencies: ["WubiUI", "WubiCore"]),
         .testTarget(
             name: "WubiCoreTests",
             dependencies: ["WubiCore"]

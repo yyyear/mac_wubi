@@ -26,6 +26,9 @@ import re
 import struct
 import sys
 from collections import defaultdict
+from pathlib import Path
+
+from export_wubi_codes import export as export_reverse_codes
 
 LETTERS = "abcdefghijklmnopqrstuvwxyz"
 DIGIT = {ch: i + 1 for i, ch in enumerate(LETTERS)}
@@ -137,6 +140,8 @@ def main() -> int:
         out.write(records)
         out.write(blob)
 
+    # Publish the matching text -> full-code index alongside the forward table.
+    export_reverse_codes(Path(dst))
     size = os.path.getsize(dst)
     print(
         f"codes={len(keys):,}  entries={len(records)//8:,}  "

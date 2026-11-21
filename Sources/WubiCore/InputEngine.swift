@@ -4,7 +4,9 @@ import Foundation
 /// the current page. Deliberately free of AppKit so it can be unit tested and
 /// driven by the command line harness.
 public final class InputEngine {
+    /// Original keystrokes for marked text and literal commits (Return / bare Shift).
     public private(set) var buffer = ""
+    private var lookupCode: String { buffer.lowercased() }
     public private(set) var candidates: [WubiCandidate] = []
     public private(set) var page = 0
 
@@ -58,16 +60,13 @@ public final class InputEngine {
         return candidates[start..<end]
     }
 
-    /// Number of the first candidate on the current page (1-based).
-    public var pageStartNumber: Int { page * pageSize + 1 }
-
     public var codeHint: String {
         guard settings.showCodeHint, !buffer.isEmpty else { return "" }
         if candidates.isEmpty {
             return settings.inputScheme != .wubi || buffer.count < WubiCode.maxCodeLength ? "继续输入" : "无候选"
         }
         if settings.inputScheme != .pinyin, !buffer.contains("'"),
-           dictionary.hasLongerCode(than: buffer) {
+           dictionary.hasLongerCode(than: lookupCode) {
             return "可续码"
         }
         if candidates.count > 1 { return "重码 " + String(candidates.count) }
@@ -76,16 +75,23 @@ public final class InputEngine {
 
     // MARK: - Typing
 
+    /// A capital anywhere in the pending text signals possible English input.
+    /// Keep accepting letters until the user commits it, even in four-key Wubi.
+    public func requiresWubiRollover(before character: Character) -> Bool {
+        settings.inputScheme == .wubi && buffer.count >= WubiCode.maxCodeLength
+            && !character.isUppercase && !buffer.contains(where: { $0.isUppercase })
+    }
+
     /// Appends one key. Returns the text to commit when the code auto-commits.
     @discardableResult
     public func append(_ character: Character) -> String? {
         let isSeparator = character == "'" && settings.inputScheme != .wubi && !buffer.isEmpty && buffer.last != "'"
         guard isSeparator || (character.isASCII && character.isLetter) else { return nil }
-        guard settings.inputScheme != .wubi || buffer.count < WubiCode.maxCodeLength else { return nil }
-        buffer.append(Character(character.lowercased()))
+        guard !requiresWubiRollover(before: character) else { return nil }
+        buffer.append(character)
         refresh()
         if settings.inputScheme == .wubi, buffer.count == WubiCode.maxCodeLength,
-           settings.autoCommitUnique,
+           settings.autoCommitUnique, !buffer.contains(where: { $0.isUppercase }),
            let only = candidates.first,
            candidates.count == 1 {
             return finish(with: only)
@@ -118,7 +124,8 @@ public final class InputEngine {
 
     /// Commits a candidate by its 1-based number on the current page.
     public func commit(pageNumber number: Int) -> String? {
-        commit(index: page * pageSize + number - 1)
+        guard number > 0, number <= pageCandidates.count else { return nil }
+        return commit(index: page * pageSize + number - 1)
     }
 
     public func commitFirst() -> String? {
@@ -143,7 +150,7 @@ public final class InputEngine {
 
     private func finish(with candidate: WubiCandidate) -> String {
         if settings.userLearning {
-            lexicon.recordCommit(code: buffer, text: candidate.text)
+            lexicon.recordCommit(code: lookupCode, text: candidate.text)
         }
         let text = candidate.text
         reset()
@@ -156,7 +163,7 @@ public final class InputEngine {
             candidates = []
             return
         }
-        candidates = ranked(for: buffer)
+        candidates = ranked(for: lookupCode)
     }
 
     /// Exact results always precede completions. Interleave Wubi and Pinyin

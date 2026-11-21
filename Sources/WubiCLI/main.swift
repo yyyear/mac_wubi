@@ -88,10 +88,10 @@ case "stats":
     print("词条数: \(dictionary.entryCount)")
     print("文件:   \(dictionary.sourceURL.path)")
 case "commit":
-    guard arguments.count >= 2, let number = Int(arguments[1]) else { usage(); exit(2) }
+    guard arguments.count >= 2, let number = Int(arguments[1]), number > 0 else { usage(); exit(2) }
     let engine = InputEngine(settings: WubiSettings())
     for character in arguments[0] { engine.append(character) }
-    if let text = engine.commit(pageNumber: number) {
+    if let text = engine.commit(index: number - 1) {
         print("上屏: \(text)")
         // The lexicon saves on a debounce timer, which a short lived CLI process
         // never reaches: flush synchronously so learning survives.

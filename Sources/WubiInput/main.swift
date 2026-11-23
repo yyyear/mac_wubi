@@ -1,6 +1,7 @@
 import AppKit
 import Carbon
 import InputMethodKit
+import WubiCore
 
 let bundle = Bundle.main
 let connectionName = (bundle.infoDictionary?["InputMethodConnectionName"] as? String) ?? "WubiInput_Connection"
@@ -36,5 +37,12 @@ NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { event in
 
 let application = NSApplication.shared
 application.setActivationPolicy(.prohibited)
+// The lexicon is shared across IMK clients. Closing a text field is not
+// a reason to write; only force the pending batch when the process quits.
+_ = NotificationCenter.default.addObserver(
+    forName: NSApplication.willTerminateNotification, object: application, queue: nil
+) { _ in
+    UserLexicon.shared.flush(wait: true)
+}
 application.run()
 _ = server

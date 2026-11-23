@@ -72,11 +72,6 @@ final class WubiInputController: IMKInputController {
         super.deactivateServer(sender)
     }
 
-    override func inputControllerWillClose() {
-        UserLexicon.shared.flush()
-        super.inputControllerWillClose()
-    }
-
     /// IMK only forwards the event kinds a controller claims. Modifier-only
     /// presses (plain Shift) arrive as flagsChanged, so ask for them explicitly.
     override func recognizedEvents(_ sender: Any!) -> Int {
@@ -318,8 +313,8 @@ final class WubiInputController: IMKInputController {
             hint += "  " + String(engine.page + 1) + "/" + String(engine.pageCount)
         }
         panel.update(engine: engine, hint: hint)
-        panel.orderFront(nil)
         panel.place(near: caretRect(client: client))
+        if !panel.isVisible { panel.orderFront(nil) }
     }
 
     private func caretRect(client: IMKTextInput) -> NSRect {
@@ -416,5 +411,6 @@ final class WubiInputController: IMKInputController {
 
     @objc private func resetLexicon(_ sender: Any) {
         UserLexicon.shared.reset()
+        UserLexicon.shared.flush(wait: true)
     }
 }

@@ -5,11 +5,18 @@ import WubiCore
 final class CandidateCell: NSView {
     private let numberLabel = NSTextField(labelWithString: "")
     private let textLabel = NSTextField(labelWithString: "")
+    private let labels = NSStackView()
+    private var codeLabel: NSTextField?
+    private var originalText: String?
+    private let highlighted: Bool
+    private let wordFont: NSFont
     var onSelect: (() -> Void)?
 
     override var isFlipped: Bool { true }
 
-    init(number: Int, text: String, code: String?, highlighted: Bool) {
+    init(number: Int, highlighted: Bool) {
+        self.highlighted = highlighted
+        wordFont = .systemFont(ofSize: 16, weight: highlighted ? .medium : .regular)
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = 5
@@ -19,24 +26,14 @@ final class CandidateCell: NSView {
         numberLabel.textColor = highlighted ? .white : .secondaryLabelColor
         numberLabel.alignment = .center
 
-        let font = NSFont.systemFont(ofSize: 16, weight: highlighted ? .medium : .regular)
-        let display = CandidateGlyphDisplay.resolve(text, font: font)
-        textLabel.font = font
-        textLabel.stringValue = display.text
-        toolTip = display.toolTip
+        textLabel.font = wordFont
         textLabel.textColor = highlighted ? .white : .labelColor
         textLabel.lineBreakMode = .byClipping
 
-        let labels = NSStackView(views: [textLabel])
+        labels.addArrangedSubview(textLabel)
         labels.orientation = .vertical
         labels.alignment = .leading
         labels.spacing = 0
-        if let code {
-            let codeLabel = NSTextField(labelWithString: code)
-            codeLabel.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
-            codeLabel.textColor = highlighted ? .white : .secondaryLabelColor
-            labels.addArrangedSubview(codeLabel)
-        }
         for view in [numberLabel, labels] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
@@ -52,9 +49,50 @@ final class CandidateCell: NSView {
             labels.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])
 
+        updateBackground()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        updateBackground()
+    }
+
+    private func updateBackground() {
         layer?.backgroundColor = highlighted
             ? NSColor.controlAccentColor.withAlphaComponent(0.85).cgColor
             : NSColor.clear.cgColor
+    }
+
+    /// A slot keeps its number, font weight and selection callback across pages.
+    func update(text: String, code: String?) -> Bool {
+        var changed = false
+        // Missing-glyph substitutions spell the original scalars, not a normalized string.
+        if originalText?.utf8.elementsEqual(text.utf8) != true {
+            originalText = text
+            let display = CandidateGlyphDisplay.resolve(text, font: wordFont)
+            textLabel.stringValue = display.text
+            toolTip = display.toolTip
+            changed = true
+        }
+        if codeLabel?.stringValue != code {
+            if let code {
+                if let codeLabel {
+                    codeLabel.stringValue = code
+                } else {
+                    let label = NSTextField(labelWithString: code)
+                    label.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
+                    label.textColor = highlighted ? .white : .secondaryLabelColor
+                    labels.addArrangedSubview(label)
+                    codeLabel = label
+                }
+            } else if let label = codeLabel {
+                labels.removeArrangedSubview(label)
+                label.removeFromSuperview()
+                codeLabel = nil
+            }
+            changed = true
+        }
+        return changed
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
@@ -74,6 +112,7 @@ final class CandidateCell: NSView {
 public final class CandidatePanel: NSPanel {
     private let blur = NSVisualEffectView()
     private let stack = NSStackView()
+    private var cells: [CandidateCell] = []
     private let hintLabel = NSTextField(labelWithString: "")
 
     public var onSelect: ((Int) -> Void)?
@@ -135,22 +174,33 @@ public final class CandidatePanel: NSPanel {
     public override var canBecomeMain: Bool { false }
 
     public func update(engine: InputEngine, hint: String) {
-        stack.arrangedSubviews.forEach { view in
-            stack.removeArrangedSubview(view)
-            view.removeFromSuperview()
+        let page = engine.pageCandidates
+        var changed = cells.count != page.count
+        while cells.count > page.count {
+            let cell = cells.removeLast()
+            stack.removeArrangedSubview(cell)
+            cell.removeFromSuperview()
         }
-        for (offset, candidate) in engine.pageCandidates.enumerated() {
+        for (offset, candidate) in page.enumerated() {
+            if offset == cells.count {
+                let cell = CandidateCell(number: offset + 1, highlighted: offset == 0)
+                cell.onSelect = { [weak self] in self?.onSelect?(offset) }
+                cells.append(cell)
+                stack.addArrangedSubview(cell)
+            }
             let code = engine.settings.showFullWubiCode ? candidate.fullWubiCode : nil
-            let cell = CandidateCell(number: offset + 1, text: candidate.text, code: code, highlighted: offset == 0)
-            cell.onSelect = { [weak self] in self?.onSelect?(offset) }
-            stack.addArrangedSubview(cell)
+            if cells[offset].update(text: candidate.text, code: code) { changed = true }
         }
-        hintLabel.stringValue = hint
-        hintLabel.isHidden = hint.isEmpty
-
+        if !hintLabel.stringValue.utf8.elementsEqual(hint.utf8) || hintLabel.isHidden != hint.isEmpty {
+            hintLabel.stringValue = hint
+            hintLabel.isHidden = hint.isEmpty
+            changed = true
+        }
+        guard changed else { return }
         contentView?.layoutSubtreeIfNeeded()
         let fitting = contentView?.fittingSize ?? NSSize(width: 120, height: 28)
-        setContentSize(NSSize(width: ceil(fitting.width) + 2, height: ceil(fitting.height)))
+        let size = NSSize(width: ceil(fitting.width) + 2, height: ceil(fitting.height))
+        if frame.size != size { setContentSize(size) }
     }
 
     /// Places the strip just under the caret, flipping above it when the caret
@@ -166,6 +216,6 @@ public final class CandidatePanel: NSPanel {
             origin.x = max(origin.x, visible.minX + 4)
             origin.y = min(max(origin.y, visible.minY + 2), visible.maxY - size.height - 2)
         }
-        setFrameOrigin(origin)
+        if frame.origin != origin { setFrameOrigin(origin) }
     }
 }

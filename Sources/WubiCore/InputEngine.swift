@@ -21,6 +21,9 @@ public final class InputEngine {
 
     /// How many extra candidates a prefix may contribute.
     private let prefixSupplementLimit = 24
+    // At most 26 × 24 immutable bundled candidates per engine. Never cache
+    // imported or learned results: both can change between keystrokes.
+    private var firstLetterSupplements: [String: [WubiCandidate]] = [:]
 
     typealias Lookup = (String, InputScheme, Bool, Int) -> [WubiCandidate]
     private let lookup: Lookup
@@ -178,6 +181,7 @@ public final class InputEngine {
         let spelling = usePinyin ? code.replacingOccurrences(of: "'", with: "") : ""
         var seen = Set<String>()
         var result: [WubiCandidate] = []
+        let hasLearning = settings.userLearning && lexicon.total(for: code) > 0
 
         func appendTier(prefix: Bool) {
             var wubi: [WubiCandidate] = []
@@ -198,13 +202,15 @@ public final class InputEngine {
         }
 
         func appendRanked(_ values: [WubiCandidate]) {
-            var tier = values
-            // A learned pick can lead either scheme, but never jump from the
-            // prefix tier ahead of an exact match. Stable ties retain the merge order.
-            if settings.userLearning, lexicon.total(for: code) > 0 {
-                tier.sort { lexicon.boost(for: code, text: $0.text) > lexicon.boost(for: code, text: $1.text) }
+            let remaining = limit - result.count
+            guard hasLearning, values.count > 1 else {
+                result.append(contentsOf: values.prefix(remaining))
+                return
             }
-            result.append(contentsOf: tier.prefix(limit - result.count))
+            // One synchronized lookup per candidate, not two per comparison.
+            // Stable ties retain the merge order within this tier.
+            let scored = values.map { ($0, lexicon.boost(for: code, text: $0.text)) }
+            result.append(contentsOf: scored.sorted { $0.1 > $1.1 }.prefix(remaining).map { $0.0 })
         }
 
         appendTier(prefix: false)
@@ -224,6 +230,8 @@ public final class InputEngine {
     /// Only the next code length is probed (never the whole subtree), so this
     /// stays a bounded 26 lookups no matter how short the prefix is.
     private func prefixSupplements(for code: String) -> [WubiCandidate] {
+        let firstLetter = code.utf8.count == 1
+        if firstLetter, let cached = firstLetterSupplements[code] { return cached }
         var collected: [WubiCandidate] = []
         collected.reserveCapacity(52)
         for scalar in Unicode.Scalar("a").value...Unicode.Scalar("z").value {
@@ -231,10 +239,9 @@ public final class InputEngine {
             let extended = code + String(Character(letter))
             collected.append(contentsOf: dictionary.candidates(for: extended, limit: 2))
         }
-        return collected
-            .sorted { $0.weight > $1.weight }
-            .prefix(prefixSupplementLimit)
-            .map { $0 }
+        let supplements = Array(collected.sorted { $0.weight > $1.weight }.prefix(prefixSupplementLimit))
+        if firstLetter { firstLetterSupplements[code] = supplements }
+        return supplements
     }
 
 }

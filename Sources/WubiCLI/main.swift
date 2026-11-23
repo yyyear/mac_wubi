@@ -93,10 +93,8 @@ case "commit":
     for character in arguments[0] { engine.append(character) }
     if let text = engine.commit(index: number - 1) {
         print("上屏: \(text)")
-        // The lexicon saves on a debounce timer, which a short lived CLI process
-        // never reaches: flush synchronously so learning survives.
-        engine.lexicon.flush()
-        Thread.sleep(forTimeInterval: 0.3)
+        // A one-shot command exits before the next batch.
+        engine.lexicon.flush(wait: true)
     } else {
         print("没有第 \(number) 个候选")
     }
